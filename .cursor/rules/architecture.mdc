@@ -1,0 +1,185 @@
+---
+description: RecoverIQ architecture, fintech safety, domain boundaries, testing, and change-control rules
+alwaysApply: true
+---
+
+# RecoverIQ Project Rules
+
+Treat the repository documentation as binding engineering contracts. Before changing architecture, domain state, database schema, recovery calculations, API contracts, ML features, or Razorpay behavior, read the corresponding root documentation file.
+
+Priority documents:
+- `ARCHITECTURE.md`
+- `DOMAIN_MODEL.md`
+- `DATABASE_SCHEMA.md`
+- `STATE_MACHINE.md`
+- `RECOVERY_ENGINE.md`
+- `API_CONTRACTS.md`
+- `AI_ML_DESIGN.md`
+- `RAZORPAY_INTEGRATION.md`
+- `FRONTEND_SPEC.md`
+- `IMPLEMENTATION_PLAN.md`
+
+## 1. Scope and architecture
+
+- Preserve the modular-monolith architecture: one Next.js web app, one FastAPI backend, one PostgreSQL database.
+- Do not introduce microservices, Kafka, Kubernetes, blockchain, RAG, multi-agent frameworks, additional payment providers, CRM integrations, voice AI, or mobile apps unless the user explicitly changes scope.
+- Do not add LangChain or LangGraph to P0. Use direct SDKs and typed service interfaces.
+- Do not redesign the product while implementing a milestone. If documentation is contradictory, stop that specific change and report the conflict instead of inventing a new architecture.
+- Make minimal, milestone-scoped changes. Do not refactor unrelated working code.
+
+## 2. Module boundaries
+
+- `apps/web` owns presentation, interaction, loading/error states, and formatting only.
+- `apps/api/app/api` owns HTTP concerns; route handlers must stay thin.
+- `apps/api/app/workflows` exclusively owns `RecoveryCase.status` transitions.
+- `apps/api/app/recovery` owns deterministic recovery analysis and ERV/ranking logic.
+- `apps/api/app/policies` owns deterministic safety/approval decisions.
+- `apps/api/app/ml` owns probability inference only; it must not mutate domain state or call Razorpay.
+- `apps/api/app/ai` owns structured explanations/outreach only; it must not authorize actions or calculate authoritative money.
+- `apps/api/app/integrations/razorpay` owns provider transport/mapping only; it must not decide recovery policy.
+- Database/ORM code must not trigger network calls from model hooks/events.
+
+## 3. Type safety and contracts
+
+- Use Pydantic models for all backend request/response and cross-service structured payloads.
+- Use Python enums/StrEnum for domain statuses/action types/failure categories.
+- Generate or derive frontend API types from FastAPI OpenAPI where practical; do not maintain conflicting handwritten contract copies.
+- Avoid `Any` in business-critical code unless an external JSON payload is being parsed at a boundary and immediately validated/mapped.
+- Validate all UUIDs, enum values, probabilities, timestamps, and monetary inputs at boundaries.
+- Never trust client-supplied probability, ERV, policy eligibility, tenant ID, or payment amount for an existing recovery case.
+
+## 4. Financial precision
+
+- Store authoritative money as integer minor units (`BIGINT` in PostgreSQL).
+- Never use float for money arithmetic.
+- Use `Decimal` for probability × money or basis-point calculations, with explicit deterministic rounding.
+- Frontend may format money for display but must not recompute authoritative recovered revenue or ERV.
+- Currency must be carried with monetary records. P0 defaults to INR but code should not silently assume currency where a field exists.
+
+## 5. Recovery state machine
+
+- `STATE_MACHINE.md` is authoritative.
+- Only workflow transition functions may mutate `RecoveryCase.status`.
+- All transitions must validate current state and required evidence.
+- Terminal states `RECOVERED`, `FAILED`, and `STOPPED` are immutable under normal automation.
+- `RECOVERED` requires verified provider/simulation outcome evidence and a persisted `RecoveryOutcome`.
+- Do not mark a case recovered because a message/link was sent.
+- Use optimistic concurrency/version checks for state-changing operations.
+
+## 6. Idempotency and external side effects
+
+- Persist action intent before external side effects.
+- Every `RecoveryAction` has a globally unique local `idempotency_key`.
+- Webhook events must be deduplicated by `(provider, provider_event_id)`.
+- Duplicate clicks/requests must not create duplicate external actions.
+- A timeout after a possibly-sent non-idempotent provider request is `UNKNOWN`; reconcile before retrying.
+- Never blindly retry Payment Link creation after an unknown-result timeout.
+- Provider event delivery order must never be assumed.
+
+## 7. Razorpay rules
+
+- Use Razorpay Test Mode only for the hackathon integration.
+- Verify webhooks using HMAC-SHA256 over the exact raw request body and `X-Razorpay-Signature` before JSON parsing.
+- Use `x-razorpay-event-id` for webhook deduplication.
+- `payment.captured` / mapped `payment_link.paid` / `subscription.charged` are success evidence when correctly correlated.
+- Do not let stale failure events downgrade already verified success.
+- While a subscription is `pending`, account for Razorpay-managed retry behavior; do not automatically create competing debits.
+- Do not generate real Payment Links for synthetic batch records; reserve real API calls for a small number of demo cases.
+- All provider calls require explicit timeouts and typed error mapping.
+
+## 8. ML rules
+
+- P0 ML predicts `P(recovery | case, action)` for case-action pairs.
+- Keep `recovery_features_v1` stable once model artifacts are trained. Changing a feature requires a schema-version change and retraining.
+- Split ML datasets by `case_id`; never leak different action rows from the same case across train/test.
+- Do not include post-outcome or provider IDs/PII as features.
+- Logistic Regression is the required baseline. XGBoost is adopted only if held-out/calibration/business-policy results justify it.
+- Persist model and feature-schema versions with recommendations.
+- If inference fails, use the documented deterministic fallback; never ask an LLM to invent probabilities.
+- Synthetic evaluation must be labeled synthetic.
+
+## 9. LLM rules
+
+- The LLM is non-authoritative.
+- It may explain a precomputed recommendation or generate bounded outreach from approved facts.
+- It may not choose arbitrary unranked actions, calculate ERV, classify provider failures as authoritative truth, modify amounts, approve actions, transition workflow state, or call Razorpay directly.
+- Use structured output validated by Pydantic.
+- On timeout, invalid JSON, schema failure, quota error, or provider outage, use deterministic template fallback.
+- Never request or expose private chain-of-thought. Store concise evidence and structured reasons only.
+- Do not send secrets or unnecessary PII to the LLM.
+
+## 10. Database rules
+
+- Follow `DATABASE_SCHEMA.md` for table/constraint/index semantics.
+- All tenant-owned rows have `organization_id` and all queries are tenant-scoped.
+- Use Alembic migrations; do not mutate schema manually in application startup.
+- Once a migration is shared/applied, add a new migration rather than rewriting history unless this is explicitly still an unshared local bootstrap.
+- Use UTC `TIMESTAMPTZ`.
+- Use JSONB only for evidence/metadata, not core searchable domain fields.
+- Audit logs are append-only through normal application code.
+
+## 11. Authentication and authorization
+
+- Backend derives tenant and role from verified authentication context.
+- Never authorize based on a frontend-hidden button alone.
+- Every case/action read or mutation must enforce organization scope server-side.
+- High-risk approvals require the documented role/policy.
+- Keep secrets in backend environment variables; never in client bundles or committed files.
+
+## 12. Error handling
+
+- Define typed domain/integration exceptions and map them once at the API boundary.
+- Never silently catch an exception and return success.
+- Never expose stack traces, API secrets, raw credentials, or unnecessary provider payloads to clients.
+- Include request/correlation IDs in logs and API error envelopes.
+- Graceful fallback is preferred to broad exception swallowing.
+- If database persistence required for safe execution fails, do not perform the external financial action.
+
+## 13. Testing
+
+- Every bug fix gets a regression test.
+- Business-critical pure logic must have unit tests: state transitions, ERV, ranking, confidence, failure normalization, policy.
+- Webhook tests must cover signature verification, duplicate event IDs, stale/out-of-order events, and success precedence.
+- Integration adapters must be tested with mocked HTTP/provider responses; never require live Razorpay for normal unit test runs.
+- Mutating API tests must cover role, tenant, invalid state, duplicate action, terminal case, and stale version cases.
+- ML tests must cover feature schema, group split, finite probabilities, model loading, and deterministic seeds.
+- LLM tests must cover schema validation and fallback.
+- Do not weaken or delete failing tests merely to make a milestone pass.
+
+## 14. File quality
+
+- Prefer focused modules. As a guideline, keep hand-written source files under ~400 lines where reasonable; split by responsibility rather than arbitrary size.
+- No god services/classes that combine HTTP, database, ML, policy and provider execution.
+- Name domain concepts exactly as documented.
+- Public service methods should have concise docstrings when behavior/invariants are non-obvious.
+- Comments explain why/safety constraints, not obvious syntax.
+
+## 15. Dependencies
+
+- Do not add a dependency for functionality that can be implemented clearly with the standard library or an already-installed package.
+- Before adding a new runtime dependency, state why it is required and where it is used.
+- Do not swap major frameworks during implementation.
+- Keep provider SDKs behind adapters so tests can mock them.
+
+## 16. Documentation change policy
+
+When code intentionally changes an established contract, update the relevant document in the same change:
+- state -> `STATE_MACHINE.md`;
+- schema -> `DATABASE_SCHEMA.md` + `DOMAIN_MODEL.md`;
+- endpoint -> `API_CONTRACTS.md`;
+- model/features -> `AI_ML_DESIGN.md` + `RECOVERY_ENGINE.md`;
+- Razorpay behavior -> `RAZORPAY_INTEGRATION.md`;
+- UI behavior -> `FRONTEND_SPEC.md`.
+
+Do not casually update documentation to justify accidental implementation drift. First verify whether the code or document is wrong.
+
+## 17. Milestone completion behavior
+
+For each Cursor task:
+1. Read the documentation files explicitly named in the prompt.
+2. Inspect existing code before editing.
+3. Implement only requested scope.
+4. Run the exact relevant tests/lint/type checks.
+5. Fix related failures before stopping.
+6. Report files changed, key behavior, tests executed, and any unresolved blocker.
+7. Do not start the next milestone automatically.
