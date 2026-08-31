@@ -154,7 +154,7 @@ Invoice reference is reserved for P1 and is not required by the P0 API.
 - `priority_score`
 - `recovery_probability` (probability of currently recommended action)
 - `expected_recoverable_amount`
-- `current_recommendation_id` optional
+- `current_analysis_run_id` optional — identifies the currently published/latest analysis snapshot for the case
 - `opened_at`
 - `last_transition_at`
 - terminal timestamp `resolved_at`
@@ -174,7 +174,7 @@ Reserved P1:
 3. terminal cases (`RECOVERED`, `FAILED`, `STOPPED`) cannot be reopened by ordinary events.
 4. `RECOVERED` requires verified recovery evidence and a `RecoveryOutcome` with positive recovered amount.
 5. exactly one `RecoveryOutcome` per case.
-6. current recommendation, if present, must belong to the same case/organization.
+6. current analysis run, if present, must belong to the same RecoveryCase; recommendations belonging to that analysis run must belong to the same case/organization; rank 1 among valid recommendations may represent the selected recommendation; RecoveryCase does not store a direct FK to one recommendation row.
 7. the case's authoritative status changes only through state-machine code.
 8. duplicate provider events must not create duplicate cases for the same failure occurrence.
 9. a new later failure after a previously recovered billing cycle may create a **new** case rather than reopening the old case.

@@ -20,7 +20,7 @@ def test_settings_development_defaults() -> None:
     assert settings.app_env == "development"
     assert settings.demo_mode is True
     assert settings.api_version == "0.1.0"
-    assert settings.database_url.startswith("postgresql://")
+    assert settings.database_url.startswith("postgresql+psycopg://")
     assert settings.llm_provider == "gemini"
 
 
