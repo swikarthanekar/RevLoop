@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.core.config import Settings, get_settings, normalize_database_url
+from app.core.config import Settings, normalize_database_url
 
 
 def postgres_url() -> str | None:
@@ -30,20 +30,37 @@ def postgres_available() -> bool:
 
 
 def _run_migrations(url: str) -> None:
+    import os
+    import subprocess
+    import sys
     from pathlib import Path
 
-    from alembic.config import Config
-
-    from alembic import command
-
-    os.environ["DATABASE_URL"] = url
-    get_settings.cache_clear()
-
     api_root = Path(__file__).resolve().parents[2]
-    config = Config(str(api_root / "alembic.ini"))
-    config.set_main_option("script_location", str(api_root / "alembic"))
-    config.set_main_option("sqlalchemy.url", url)
-    command.upgrade(config, "head")
+    migration_env = os.environ.copy()
+    migration_env["DATABASE_URL"] = url
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "alembic",
+            "-c",
+            str(api_root / "alembic.ini"),
+            "upgrade",
+            "head",
+        ],
+        cwd=str(api_root),
+        env=migration_env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            "Alembic upgrade failed.\n"
+            f"stdout:\n{result.stdout}\n"
+            f"stderr:\n{result.stderr}"
+        )
 
 
 @pytest.fixture(scope="session")

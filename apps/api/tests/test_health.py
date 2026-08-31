@@ -45,4 +45,10 @@ def test_api_v1_router_is_available() -> None:
 
 def test_registered_api_v1_routes_after_cleanup() -> None:
     api_v1_paths = sorted(path for path in app.openapi()["paths"] if path.startswith("/api/v1"))
-    assert api_v1_paths == ["/api/v1/"]
+    assert api_v1_paths == [
+        "/api/v1/",
+        "/api/v1/dashboard/summary",
+        "/api/v1/recovery-cases",
+        "/api/v1/recovery-cases/{case_id}",
+        "/api/v1/recovery-cases/{case_id}/timeline",
+    ]

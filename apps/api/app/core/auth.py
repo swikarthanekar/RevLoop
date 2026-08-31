@@ -10,9 +10,6 @@ from app.domain.enums import UserRole
 
 security = HTTPBearer(auto_error=False)
 
-DEV_TEST_USER_ID = UUID("00000000-0000-4000-8000-000000000001")
-DEV_TEST_ORG_ID = UUID("00000000-0000-4000-8000-000000000010")
-
 
 class AuthContext(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -29,6 +26,9 @@ class AuthBackend(Protocol):
 class DevAuthBackend:
     """Temporary auth for development and automated tests."""
 
+    def __init__(self, settings: Settings) -> None:
+        self._settings = settings
+
     def resolve(self, token: str | None) -> AuthContext:
         if token is None:
             raise HTTPException(
@@ -36,28 +36,38 @@ class DevAuthBackend:
                 detail={"code": "UNAUTHORIZED", "message": "Authentication required."},
             )
 
+        role: UserRole | None = None
         if token == "dev-analyst":
-            return AuthContext(
-                user_id=DEV_TEST_USER_ID,
-                organization_id=DEV_TEST_ORG_ID,
-                role=UserRole.ANALYST,
-            )
-        if token == "dev-operator":
-            return AuthContext(
-                user_id=DEV_TEST_USER_ID,
-                organization_id=DEV_TEST_ORG_ID,
-                role=UserRole.OPERATOR,
-            )
-        if token == "dev-admin":
-            return AuthContext(
-                user_id=DEV_TEST_USER_ID,
-                organization_id=DEV_TEST_ORG_ID,
-                role=UserRole.ADMIN,
+            role = UserRole.ANALYST
+        elif token == "dev-operator":
+            role = UserRole.OPERATOR
+        elif token == "dev-admin":
+            role = UserRole.ADMIN
+
+        if role is None:
+            raise HTTPException(
+                status_code=401,
+                detail={"code": "UNAUTHORIZED", "message": "Invalid authentication token."},
             )
 
-        raise HTTPException(
-            status_code=401,
-            detail={"code": "UNAUTHORIZED", "message": "Invalid authentication token."},
+        user_id = self._settings.dev_auth_user_id
+        organization_id = self._settings.dev_auth_organization_id
+        if user_id is None or organization_id is None:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "code": "AUTH_NOT_CONFIGURED",
+                    "message": (
+                        "Development auth requires DEV_AUTH_USER_ID and "
+                        "DEV_AUTH_ORGANIZATION_ID to be configured."
+                    ),
+                },
+            )
+
+        return AuthContext(
+            user_id=user_id,
+            organization_id=organization_id,
+            role=role,
         )
 
 
@@ -79,7 +89,7 @@ class SupabaseAuthBackend:
 
 def get_auth_backend(settings: Settings = Depends(get_settings)) -> AuthBackend:
     if settings.app_env in ("development", "test"):
-        return DevAuthBackend()
+        return DevAuthBackend(settings)
     return SupabaseAuthBackend(settings)
 
 

@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
+from uuid import UUID
 
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -34,6 +35,9 @@ class Settings(BaseSettings):
     api_version: str = "0.1.0"
 
     database_url: str = DEFAULT_DATABASE_URL
+
+    dev_auth_user_id: UUID | None = None
+    dev_auth_organization_id: UUID | None = None
 
     supabase_jwt_secret: SecretStr = Field(default=SecretStr("dev-supabase-jwt-secret"))
 

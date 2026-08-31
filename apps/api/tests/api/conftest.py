@@ -1,0 +1,147 @@
+"""Shared fixtures for read API integration tests."""
+
+from __future__ import annotations
+
+from collections.abc import Generator
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session, sessionmaker
+
+from app.core.auth import AuthContext, get_current_user
+from app.core.config import Settings, get_settings
+from app.core.deps import get_db
+from app.demo.constants import (
+    DEMO_AUTH_USER_ANALYST_ID,
+    DEMO_ORGANIZATION_ID,
+)
+from app.demo.seed import seed_demo_database
+from app.domain.enums import UserRole
+from app.main import create_app
+from tests.demo.conftest import postgres_available, postgres_url
+
+pytestmark = pytest.mark.skipif(
+    not postgres_available(),
+    reason="PostgreSQL not available (set REVLOOP_TEST_DATABASE_URL)",
+)
+
+DEMO_AUTH_HEADERS = {"Authorization": "Bearer dev-analyst"}
+
+
+@pytest.fixture(scope="session")
+def api_demo_settings(migrated_postgres) -> Settings:
+    if migrated_postgres is None:
+        pytest.skip("PostgreSQL not available")
+    url = postgres_url()
+    if url is None:
+        pytest.skip("PostgreSQL not available")
+    return Settings(
+        app_env="test",
+        demo_mode=True,
+        database_url=url,
+        dev_auth_user_id=DEMO_AUTH_USER_ANALYST_ID,
+        dev_auth_organization_id=DEMO_ORGANIZATION_ID,
+    )
+
+
+@pytest.fixture(scope="session")
+def seeded_database(migrated_postgres, api_demo_settings):
+    if migrated_postgres is None:
+        pytest.skip("PostgreSQL not available")
+    seed_demo_database(reset=True, settings=api_demo_settings)
+    return migrated_postgres
+
+
+@pytest.fixture
+def db_session(seeded_database) -> Generator[Session, None, None]:
+    session = sessionmaker(bind=seeded_database, autoflush=False, autocommit=False)()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+@pytest.fixture
+def api_client(seeded_database, api_demo_settings) -> Generator[TestClient, None, None]:
+    app = create_app()
+
+    def override_get_db() -> Generator[Session, None, None]:
+        session = sessionmaker(bind=seeded_database, autoflush=False, autocommit=False)()
+        try:
+            yield session
+        finally:
+            session.close()
+
+    def override_get_settings() -> Settings:
+        return api_demo_settings
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_settings] = override_get_settings
+    client = TestClient(app, raise_server_exceptions=False)
+    yield client
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def other_org_client(seeded_database) -> Generator[TestClient, None, None]:
+    import uuid
+
+    other_org_id = uuid.uuid5(uuid.NAMESPACE_DNS, "revloop-api-other-org")
+    other_user_id = uuid.uuid5(uuid.NAMESPACE_DNS, "revloop-api-other-user")
+
+    app = create_app()
+
+    def override_get_db() -> Generator[Session, None, None]:
+        session = sessionmaker(bind=seeded_database, autoflush=False, autocommit=False)()
+        try:
+            yield session
+        finally:
+            session.close()
+
+    async def override_get_current_user() -> AuthContext:
+        return AuthContext(
+            user_id=other_user_id,
+            organization_id=other_org_id,
+            role=UserRole.ANALYST,
+        )
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
+    client = TestClient(app, raise_server_exceptions=False)
+    yield client
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def empty_org_client(seeded_database) -> Generator[TestClient, None, None]:
+    import uuid
+
+    empty_org_id = uuid.uuid5(uuid.NAMESPACE_DNS, "revloop-api-empty-org")
+    empty_user_id = uuid.uuid5(uuid.NAMESPACE_DNS, "revloop-api-empty-user")
+
+    app = create_app()
+
+    def override_get_db() -> Generator[Session, None, None]:
+        session = sessionmaker(bind=seeded_database, autoflush=False, autocommit=False)()
+        try:
+            yield session
+        finally:
+            session.close()
+
+    async def override_get_current_user() -> AuthContext:
+        return AuthContext(
+            user_id=empty_user_id,
+            organization_id=empty_org_id,
+            role=UserRole.ANALYST,
+        )
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
+    client = TestClient(app, raise_server_exceptions=False)
+    yield client
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def demo_org_id() -> str:
+    return str(DEMO_ORGANIZATION_ID)

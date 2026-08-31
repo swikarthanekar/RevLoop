@@ -4,6 +4,8 @@ from fastapi.testclient import TestClient
 from app.main import create_app
 from tests.helpers.test_routes import register_test_routes
 
+pytest_plugins = ["tests.demo.conftest"]
+
 
 @pytest.fixture
 def client_with_test_routes() -> TestClient:
