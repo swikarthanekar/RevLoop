@@ -1,4 +1,4 @@
-# RecoverIQ — PostgreSQL Database Schema
+# RevLoop — PostgreSQL Database Schema
 
 **Status:** Phase 0 schema contract  
 **Database:** PostgreSQL 15+ compatible  

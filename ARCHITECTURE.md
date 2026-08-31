@@ -1,12 +1,12 @@
-# RecoverIQ — Architecture
+# RevLoop — Architecture
 
 **Status:** Phase 0 architecture baseline  
-**Authority:** RecoverIQ PRD/SRS  
+**Authority:** RevLoop PRD/SRS  
 **Change policy:** Architectural decisions marked **LOCKED** should not be changed casually. Any change must update this file, `DOMAIN_MODEL.md`, `STATE_MACHINE.md`, and affected API/database contracts in the same commit.
 
 ## 1. System purpose
 
-RecoverIQ is an AI-assisted revenue recovery control plane for Razorpay merchants. The P0 system detects failed one-time and subscription payments, creates a `RecoveryCase`, evaluates candidate recovery actions, predicts action-specific recovery probability, ranks actions by Expected Recovery Value (ERV), applies deterministic safety policy, executes an allowed action, observes the provider outcome, and records verified recovered revenue.
+RevLoop is an AI-assisted revenue recovery control plane for Razorpay merchants. The P0 system detects failed one-time and subscription payments, creates a `RecoveryCase`, evaluates candidate recovery actions, predicts action-specific recovery probability, ranks actions by Expected Recovery Value (ERV), applies deterministic safety policy, executes an allowed action, observes the provider outcome, and records verified recovered revenue.
 
 The system is intentionally not a generic chatbot, CRM, marketing platform, fraud system, or multi-agent framework.
 
@@ -14,7 +14,7 @@ The system is intentionally not a generic chatbot, CRM, marketing platform, frau
 
 1. **Financial execution is deterministic.** ML may score; LLMs may explain/generate bounded text; neither can bypass policy or directly mutate money state.
 2. **Persist before side effect.** Intent/state for an external action must be durably recorded before the external call is attempted.
-3. **Every external action is idempotent at RecoverIQ level.** Local uniqueness prevents duplicate action creation even if provider/webhook delivery repeats.
+3. **Every external action is idempotent at RevLoop level.** Local uniqueness prevents duplicate action creation even if provider/webhook delivery repeats.
 4. **Provider events are evidence, not ordered commands.** Webhooks may be duplicated or arrive out of order.
 5. **Successful payment evidence dominates recovery state.** Once revenue is verified recovered, later stale failure events cannot reopen the case.
 6. **Money is integer minor units.** Never use floating point for amounts.
@@ -342,7 +342,7 @@ If the LLM is unavailable, core recovery calculation and execution eligibility c
 
 ### ADR-008 — Local idempotency is mandatory
 
-RecoverIQ must enforce unique action intent regardless of provider-level idempotency support.
+RevLoop must enforce unique action intent regardless of provider-level idempotency support.
 
 ### ADR-009 — Real vs simulated boundaries
 

@@ -1,4 +1,4 @@
-# RecoverIQ — Domain Model
+# RevLoop — Domain Model
 
 **Status:** Phase 0 domain contract  
 **Rule:** Database models, Pydantic schemas, ML features and UI terminology must use the meanings defined here.
@@ -15,7 +15,7 @@
 | Recovery Outcome | Final verified result attributable to a recovery case |
 | Recovered Revenue | Successfully collected amount verified from payment evidence, not merely a sent message |
 | ERV | Expected Recovery Value of an intervention |
-| Failure Category | RecoverIQ's normalized deterministic category derived from provider evidence |
+| Failure Category | RevLoop's normalized deterministic category derived from provider evidence |
 | Confidence | Trust level in recommendation, separate from recovery probability |
 | Policy | Deterministic merchant/safety restrictions applied after scoring |
 | Attempt | A domain recovery intervention; distinct from a provider's internal payment retry |
@@ -119,7 +119,7 @@ Represents recurring billing context.
 - last provider event time
 
 ### Important semantics
-A Razorpay subscription in `pending` can already be undergoing Razorpay-managed retry behavior. RecoverIQ must not blindly trigger a competing debit.
+A Razorpay subscription in `pending` can already be undergoing Razorpay-managed retry behavior. RevLoop must not blindly trigger a competing debit.
 
 ### Invariants
 - provider subscription ID unique;
@@ -397,4 +397,4 @@ erDiagram
 - creating a new action because a webhook was retried;
 - automatically retrying an `UNKNOWN` provider call without reconciliation;
 - mixing synthetic batch money with live/test-mode money without source labels;
-- counting Razorpay's internal subscription retry as a new RecoverIQ action unless RecoverIQ explicitly initiated/managed an intervention around it.
+- counting Razorpay's internal subscription retry as a new RevLoop action unless RevLoop explicitly initiated/managed an intervention around it.

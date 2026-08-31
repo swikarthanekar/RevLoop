@@ -1,4 +1,4 @@
-# RecoverIQ — Razorpay Integration Specification
+# RevLoop — Razorpay Integration Specification
 
 **Status:** P0 payment-provider contract  
 **Mode:** Razorpay Test Mode for hackathon  
@@ -249,7 +249,7 @@ P0 request fields:
   "currency": "INR",
   "accept_partial": false,
   "reference_id": "rq_<stable-short-action-ref>",
-  "description": "RecoverIQ payment recovery",
+  "description": "RevLoop payment recovery",
   "customer": {
     "name": "Synthetic Demo Customer"
   },
@@ -259,7 +259,7 @@ P0 request fields:
   },
   "reminder_enable": false,
   "notes": {
-    "recoveriq_case": "short-safe-id"
+    "revloop_case": "short-safe-id"
   }
 }
 ```
@@ -298,7 +298,7 @@ Razorpay subscription semantics are important to the product.
 ### `subscription.pending`
 Means an auto-charge was unsuccessful. Razorpay may continue automatic retry behavior while pending depending on payment method/product configuration.
 
-RecoverIQ behavior:
+RevLoop behavior:
 - upsert subscription state;
 - create/update recovery case for the current failure episode;
 - classify `MANDATE_OR_RECURRING_FAILURE` unless stronger payment failure evidence exists;
@@ -311,12 +311,12 @@ Successful charge evidence.
 If related recovery case is non-terminal:
 - create verified outcome;
 - mark case `RECOVERED`;
-- stop/cancel pending RecoverIQ interventions.
+- stop/cancel pending RevLoop interventions.
 
 ### `subscription.halted`
 Provider retries are exhausted according to Razorpay state.
 
-RecoverIQ candidates may become:
+RevLoop candidates may become:
 - request alternate payment method;
 - Payment Link where product flow makes sense;
 - manual escalation;
@@ -422,7 +422,7 @@ POST Payment Link creation:
 1. Prepare a Razorpay test subscription.
 2. Simulate/test a failed subsequent charge using documented test flow.
 3. Receive `subscription.pending`.
-4. RecoverIQ recommends WAIT/alternate method depending context.
+4. RevLoop recommends WAIT/alternate method depending context.
 5. Demonstrate successful test charge/card-change path if reliable.
 6. `subscription.charged` resolves case.
 
@@ -450,4 +450,4 @@ Because provider APIs can evolve, one day before submission verify in official R
 - downtime API availability with current test key;
 - webhook endpoint accessibility from deployed backend.
 
-Do not redesign RecoverIQ based on minor provider changes; update only adapter details.
+Do not redesign RevLoop based on minor provider changes; update only adapter details.

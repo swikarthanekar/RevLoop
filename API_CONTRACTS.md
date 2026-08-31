@@ -1,4 +1,4 @@
-# RecoverIQ — P0 API Contracts
+# RevLoop — P0 API Contracts
 
 **Status:** Initial P0 HTTP contract  
 **Base path:** `/api/v1`  

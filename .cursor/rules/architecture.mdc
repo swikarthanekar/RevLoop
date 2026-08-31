@@ -1,9 +1,9 @@
 ---
-description: RecoverIQ architecture, fintech safety, domain boundaries, testing, and change-control rules
+description: RevLoop architecture, fintech safety, domain boundaries, testing, and change-control rules
 alwaysApply: true
 ---
 
-# RecoverIQ Project Rules
+# RevLoop Project Rules
 
 Treat the repository documentation as binding engineering contracts. Before changing architecture, domain state, database schema, recovery calculations, API contracts, ML features, or Razorpay behavior, read the corresponding root documentation file.
 

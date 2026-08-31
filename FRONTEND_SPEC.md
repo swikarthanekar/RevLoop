@@ -1,4 +1,4 @@
-# RecoverIQ — P0 Frontend Specification
+# RevLoop — P0 Frontend Specification
 
 **Status:** Essential screens only  
 **Stack:** Next.js + TypeScript + Tailwind + shadcn/ui + TanStack Table + Recharts
@@ -8,7 +8,7 @@
 The UI must feel like a credible revenue-operations SaaS product. In the first five seconds, judges should understand:
 
 1. how much revenue is at risk;
-2. how much RecoverIQ recovered;
+2. how much RevLoop recovered;
 3. that cases are prioritized by AI/financial value;
 4. that actions are explainable, governed and auditable.
 
@@ -26,7 +26,7 @@ Do not build a generic chatbot, CRM, settings suite, mobile app or campaign buil
 
 ```text
 ┌──────────────┬─────────────────────────────────────────┐
-│ RecoverIQ    │ Top bar: merchant / demo source / user │
+│ RevLoop    │ Top bar: merchant / demo source / user │
 │              ├─────────────────────────────────────────┤
 │ Dashboard    │                                         │
 │ Opportunities│              page content               │
@@ -74,7 +74,7 @@ Route:
 ```
 
 ### Purpose
-Answer: “What is at risk, what has been recovered, and is RecoverIQ outperforming the baseline?”
+Answer: “What is at risk, what has been recovered, and is RevLoop outperforming the baseline?”
 
 ### Page hierarchy
 

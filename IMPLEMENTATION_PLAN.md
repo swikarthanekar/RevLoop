@@ -1,4 +1,4 @@
-# RecoverIQ — Implementation Plan
+# RevLoop — Implementation Plan
 
 **Goal:** Build the P0 closed loop reliably before adding P1 polish.  
 **Sequence rule:** A milestone may depend on previous milestones. Do not jump ahead when its prerequisites are not green.

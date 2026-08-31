@@ -1,4 +1,4 @@
-# RecoverIQ — Sequential Cursor Implementation Prompts
+# RevLoop — Sequential Cursor Implementation Prompts
 
 These prompts are intentionally milestone-scoped. Use them in order. Do not ask Cursor to continue into the next prompt automatically.
 
@@ -18,7 +18,7 @@ Each prompt assumes paths from `ARCHITECTURE.md` and `IMPLEMENTATION_PLAN.md`. I
 # Prompt 01 — Repository Initialization
 
 ```text
-You are implementing RecoverIQ Phase 0.
+You are implementing RevLoop Phase 0.
 
 Read first, in this order:
 1. ARCHITECTURE.md
@@ -955,7 +955,7 @@ Requirements:
 - routes exist only when DEMO_MODE=true and require ADMIN;
 - reset restores exact deterministic demo state;
 - run-batch clearly returns data_source=SYNTHETIC_SIMULATION;
-- compare RecoverIQ policy vs documented naive baseline;
+- compare RevLoop policy vs documented naive baseline;
 - do not call Razorpay for each synthetic case;
 - do not mix simulated outcome evidence with Razorpay test evidence.
 
@@ -1080,7 +1080,7 @@ Run all automated tests after deployment-related edits. Report exact real integr
 ```text
 You are doing a final pre-submission review, not adding features.
 
-Read all root RecoverIQ engineering documents and .cursor/rules/architecture.mdc.
+Read all root RevLoop engineering documents and .cursor/rules/architecture.mdc.
 
 Audit the implementation for these failure classes:
 - direct RecoveryCase.status assignments outside workflow state machine;

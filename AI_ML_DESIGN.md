@@ -1,4 +1,4 @@
-# RecoverIQ — AI & ML Design
+# RevLoop — AI & ML Design
 
 **Status:** P0 intelligence contract  
 **Principle:** Use ML where prediction creates economic value, deterministic code where correctness matters, and LLMs only where language/unstructured presentation adds value.
@@ -276,7 +276,7 @@ The most important offline comparison is not AUC alone.
 Evaluate:
 
 ```text
-RecoverIQ selected action
+RevLoop selected action
 vs
 Naive baseline policy
 ```

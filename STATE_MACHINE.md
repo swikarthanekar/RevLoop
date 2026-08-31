@@ -1,4 +1,4 @@
-# RecoverIQ — RecoveryCase State Machine
+# RevLoop — RecoveryCase State Machine
 
 **Status:** Authoritative Phase 0 workflow state contract  
 **Critical rule:** No code outside the workflow transition service may directly assign `RecoveryCase.status`.
@@ -152,10 +152,10 @@ Invalid transition raises a typed `InvalidStateTransition` and performs no mutat
 Three retry concepts must not be confused.
 
 ### 6.1 Provider retry
-Razorpay may automatically retry subscription charges while the subscription is `pending`. RecoverIQ treats this as provider behavior and normally uses `WAIT`/scheduled re-evaluation rather than creating duplicate debit attempts.
+Razorpay may automatically retry subscription charges while the subscription is `pending`. RevLoop treats this as provider behavior and normally uses `WAIT`/scheduled re-evaluation rather than creating duplicate debit attempts.
 
 ### 6.2 Recovery attempt
-A business intervention selected by RecoverIQ. Increments `RecoveryAction.attempt_number`.
+A business intervention selected by RevLoop. Increments `RecoveryAction.attempt_number`.
 
 Examples:
 - create Payment Link;

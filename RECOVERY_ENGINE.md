@@ -1,4 +1,4 @@
-# RecoverIQ — Recovery Engine Specification
+# RevLoop — Recovery Engine Specification
 
 **Status:** Authoritative P0 recovery decision contract  
 **Goal:** Convert a persisted `RecoveryCase` into a safe, explainable, ranked next-best action.
@@ -135,7 +135,7 @@ Recommended P0 features:
 | `day_of_week` | integer | 0–6 |
 | `hours_since_failure` | float | current time - source failure time |
 | `retry_count_provider` | integer | provider retry/auth attempts if known |
-| `recovery_attempts_so_far` | integer | RecoverIQ business attempts |
+| `recovery_attempts_so_far` | integer | RevLoop business attempts |
 | `contacts_last_24h` | integer | outbound recovery contacts |
 | `rail_degraded` | boolean | verified downtime match |
 | `downtime_severity` | categorical | high/medium/low/none/unknown |
@@ -209,7 +209,7 @@ Not every case gets every action.
 
 ### 5.3 `RETRY_SAME_METHOD` semantics
 
-This action does not mean RecoverIQ may create an unsupported autonomous debit.
+This action does not mean RevLoop may create an unsupported autonomous debit.
 
 - For one-time payment: it represents presenting/recommending another attempt with same method when product flow supports it.
 - For subscription `pending`: exclude by default when Razorpay is already retrying.
@@ -395,7 +395,7 @@ Require human approval when any is true:
 
 ### 9.3 Cooldown
 
-If recent RecoverIQ action was executed within `cooldown_minutes`, contact/retry-like candidates should be blocked or scheduled after cooldown.
+If recent RevLoop action was executed within `cooldown_minutes`, contact/retry-like candidates should be blocked or scheduled after cooldown.
 
 ## 10. Ranking
 
@@ -518,7 +518,7 @@ The LLM can turn these into readable prose. It cannot add unsupported factors.
 
 ## 15. Batch evaluation contract
 
-The batch evaluator must compare RecoverIQ against at least one simple baseline.
+The batch evaluator must compare RevLoop against at least one simple baseline.
 
 Preferred baseline:
 
@@ -530,7 +530,7 @@ Report:
 - number of cases;
 - amount at risk;
 - recovered amount under baseline simulation;
-- recovered amount under RecoverIQ policy simulation;
+- recovered amount under RevLoop policy simulation;
 - incremental recovered amount;
 - recovery rate;
 - actions per recovered case;
