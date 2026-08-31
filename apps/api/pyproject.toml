@@ -1,0 +1,37 @@
+[project]
+name = "revloop-api"
+version = "0.1.0"
+description = "RevLoop FastAPI backend"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic-settings>=2.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx>=0.28.0",
+    "pytest>=8.3.0",
+    "ruff>=0.8.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = [
+    "-p", "no:launch_testing",
+    "-p", "no:launch_ros",
+    "-p", "no:ament_copyright",
+    "-p", "no:ament_flake8",
+    "-p", "no:ament_lint",
+    "-p", "no:ament_pep257",
+    "-p", "no:ament_xmllint",
+]
