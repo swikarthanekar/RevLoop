@@ -715,3 +715,133 @@ def write_dataset(output_dir: Path, dataset: SyntheticDataset) -> tuple[Path, Pa
 def read_csv_rows(path: Path) -> list[dict[str, str]]:
     with path.open(encoding="utf-8", newline="") as handle:
         return list(csv.DictReader(handle))
+
+
+# ---------------------------------------------------------------------------
+# Prompt 11 — ML training/evaluation shared constants and helpers
+# ---------------------------------------------------------------------------
+
+MODEL_VERSION = "lr-v1.0.0"
+ARTIFACT_FORMAT_VERSION = "revloop-model-bundle-v1"
+MODEL_FAMILY = "logistic_regression"
+STOP_ACTION_VALUE = RecoveryActionType.STOP.value
+PREDICTIVE_ACTION_TYPES: tuple[str, ...] = tuple(
+    action.value for action in RecoveryActionType if action != RecoveryActionType.STOP
+)
+CALIBRATION_BIN_COUNT = 10
+EXPECTED_CSV_COLUMN_COUNT = 25
+
+LOGISTIC_REGRESSION_CONFIG: dict[str, object] = {
+    "solver": "lbfgs",
+    "C": 1.0,
+    "max_iter": 1000,
+    "class_weight": None,
+}
+
+
+def sha256_file(path: Path) -> str:
+    import hashlib
+
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def read_raw_csv_header(path: Path) -> list[str]:
+    with path.open(newline="", encoding="utf-8") as handle:
+        return next(csv.reader(handle))
+
+
+def validate_raw_csv_header(header: Sequence[str]) -> None:
+    if len(header) != EXPECTED_CSV_COLUMN_COUNT:
+        raise ValueError(
+            f"Expected {EXPECTED_CSV_COLUMN_COUNT} CSV columns, found {len(header)}."
+        )
+    if len(header) != len(set(header)):
+        duplicates = sorted({name for name in header if header.count(name) > 1})
+        raise ValueError(f"Duplicate CSV column names detected: {duplicates}")
+    if header.count("action_type") != 1:
+        raise ValueError("CSV header must contain action_type exactly once.")
+    missing = [column for column in CSV_COLUMNS if column not in header]
+    if missing:
+        raise ValueError(f"CSV header missing required columns: {missing}")
+    unexpected_features = [
+        column
+        for column in header
+        if column not in CSV_COLUMNS and column not in METADATA_COLUMNS
+    ]
+    if unexpected_features:
+        raise ValueError(f"CSV header contains unexpected columns: {unexpected_features}")
+
+
+def load_dataset_summary(summary_path: Path) -> dict[str, Any]:
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    validate_dataset_summary(summary)
+    return summary
+
+
+def validate_dataset_summary(summary: dict[str, Any]) -> None:
+    required_fields = {
+        "dataset_version": "synthetic_recovery_v1",
+        "feature_schema_version": FEATURE_SCHEMA_VERSION,
+        "target_column": "recovered_within_72h",
+        "group_column": "case_id",
+        "split_column": "split",
+    }
+    for summary_field, expected in required_fields.items():
+        actual = summary.get(summary_field)
+        if actual != expected:
+            raise ValueError(
+                f"Dataset summary field {summary_field!r} "
+                f"expected {expected!r}, got {actual!r}"
+            )
+
+    feature_columns = summary.get("feature_columns")
+    if list(feature_columns) != list(FEATURE_COLUMNS):
+        raise ValueError("Dataset summary feature_columns do not match Prompt 10 contract.")
+
+    evaluation_only = summary.get("evaluation_only_columns")
+    if "synthetic_latent_probability" not in evaluation_only:
+        raise ValueError("Dataset summary must mark synthetic_latent_probability evaluation-only.")
+
+
+def decode_amount_at_risk_minor(amount_log1p: float) -> int:
+    if amount_log1p < 0:
+        raise ValueError("amount_log1p must be non-negative.")
+    return max(0, round(math.expm1(amount_log1p)))
+
+
+def parse_boolean_token(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if int(value) == 0:
+            return False
+        if int(value) == 1:
+            return True
+        raise ValueError(f"Unexpected boolean token: {value!r}")
+    normalized = str(value).strip().lower()
+    if normalized == "true":
+        return True
+    if normalized == "false":
+        return False
+    raise ValueError(f"Unexpected boolean token: {value!r}")
+
+
+def is_stop_action(action_type: object) -> bool:
+    return str(action_type) == STOP_ACTION_VALUE
+
+
+def assert_feature_allowlist(columns: Sequence[str]) -> None:
+    allowed = set(FEATURE_COLUMNS)
+    forbidden_present = sorted(set(columns).intersection(FORBIDDEN_FEATURE_COLUMNS))
+    if forbidden_present:
+        raise ValueError(f"Forbidden model feature columns present: {forbidden_present}")
+    if set(columns) != allowed:
+        missing = sorted(allowed.difference(columns))
+        extra = sorted(set(columns).difference(allowed))
+        raise ValueError(
+            f"Model feature allowlist mismatch. missing={missing} extra={extra}"
+        )
