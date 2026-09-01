@@ -289,7 +289,7 @@ def simulate_policy_on_test_cases(
 
 def main(argv: list[str] | None = None) -> int:
     _configure_import_paths()
-    from ml.common import CALIBRATION_BIN_COUNT, MODEL_VERSION, sha256_file
+    from ml.common import CALIBRATION_BIN_COUNT, sha256_file
     from ml.train_baseline import (
         evaluate_split,
         load_training_frame,
@@ -336,7 +336,8 @@ def main(argv: list[str] | None = None) -> int:
 
     metrics_payload = {
         "evaluation_label": "SYNTHETIC MODEL EVALUATION",
-        "model_version": MODEL_VERSION,
+        "model_version": metadata.get("model_version"),
+        "model_family": metadata.get("model_family"),
         "feature_schema_version": summary["feature_schema_version"],
         "dataset": {
             "dataset_version": summary["dataset_version"],

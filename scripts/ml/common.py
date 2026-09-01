@@ -738,6 +738,236 @@ LOGISTIC_REGRESSION_CONFIG: dict[str, object] = {
     "class_weight": None,
 }
 
+# Frozen Prompt 11 Logistic Regression reference metrics (immutable during Prompt 12).
+FROZEN_LR_ARTIFACT_SHA256 = (
+    "152ecbc8ab4e5bc5b583059a824ea562363f920e238b4b7aa283d9cb74447ef2"
+)
+FROZEN_LR_SOURCE_COMMIT = "fd08bf7"
+FROZEN_LR_VALIDATION_METRICS: dict[str, float] = {
+    "roc_auc": 0.7803,
+    "pr_auc": 0.5722,
+    "log_loss": 0.4784,
+    "brier_score": 0.1568,
+    "expected_calibration_error": 0.0075,
+}
+FROZEN_LR_TEST_METRICS: dict[str, float] = {
+    "roc_auc": 0.7764,
+    "pr_auc": 0.5563,
+    "log_loss": 0.4768,
+    "brier_score": 0.1564,
+}
+FROZEN_LR_POLICY_EXPECTED_RECOVERED = 1_028_844_436
+
+# Prompt 12 — restrained XGBoost challenger configuration.
+XGBOOST_MODEL_VERSION = "xgb-v1.0.0"
+XGBOOST_MODEL_FAMILY = "xgboost"
+XGBOOST_EARLY_STOPPING_ROUNDS = 50
+XGBOOST_CONFIG: dict[str, object] = {
+    "objective": "binary:logistic",
+    "eval_metric": "logloss",
+    "tree_method": "hist",
+    "max_depth": 4,
+    "learning_rate": 0.05,
+    "n_estimators": 800,
+    "min_child_weight": 5,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "reg_lambda": 1.0,
+    "reg_alpha": 0.0,
+    "random_state": 20260901,
+    "n_jobs": 1,
+}
+
+MATERIALITY_THRESHOLDS: dict[str, float] = {
+    "pr_auc_absolute": 0.015,
+    "brier_absolute": 0.003,
+    "log_loss_absolute": 0.008,
+    "expected_recovered_relative": 0.01,
+}
+GUARDRAIL_THRESHOLDS: dict[str, float] = {
+    "pr_auc_regression": 0.010,
+    "brier_regression": 0.003,
+    "log_loss_regression": 0.005,
+    "expected_recovered_regression_relative": 0.005,
+}
+
+CALIBRATION_BRIER_MARGIN = 0.005
+CALIBRATION_ECE_MARGIN = 0.010
+CALIBRATION_ECE_ABSOLUTE = 0.020
+
+RUNTIME_MODEL_LOGISTIC_REGRESSION = "logistic_regression"
+RUNTIME_MODEL_XGBOOST = "xgboost"
+
+
+@dataclass(frozen=True)
+class CalibrationDecision:
+    method: str
+    reason: str
+    uncalibrated_validation_brier: float
+    uncalibrated_validation_log_loss: float
+    uncalibrated_validation_ece: float
+
+
+@dataclass(frozen=True)
+class ModelSelectionResult:
+    selected_model: str
+    selection_reason_codes: tuple[str, ...]
+    material_wins: tuple[str, ...]
+    guardrail_failures: tuple[str, ...]
+    materiality_checks: dict[str, dict[str, object]]
+    guardrail_checks: dict[str, dict[str, object]]
+
+
+def decide_calibration_method(
+    *,
+    uncalibrated_validation_metrics: dict[str, Any],
+) -> CalibrationDecision:
+    brier = float(uncalibrated_validation_metrics["brier_score"])
+    log_loss_value = float(uncalibrated_validation_metrics["log_loss"])
+    ece = float(uncalibrated_validation_metrics["expected_calibration_error"])
+    lr_brier = FROZEN_LR_VALIDATION_METRICS["brier_score"]
+    lr_ece = FROZEN_LR_VALIDATION_METRICS["expected_calibration_error"]
+
+    clearly_poor = (
+        brier > lr_brier + CALIBRATION_BRIER_MARGIN and ece > lr_ece + CALIBRATION_ECE_MARGIN
+    ) or ece > CALIBRATION_ECE_ABSOLUTE
+
+    if clearly_poor:
+        return CalibrationDecision(
+            method="sigmoid",
+            reason=(
+                "Uncalibrated XGBoost validation calibration was clearly worse than "
+                "frozen Logistic Regression; sigmoid calibration fitted on validation only."
+            ),
+            uncalibrated_validation_brier=brier,
+            uncalibrated_validation_log_loss=log_loss_value,
+            uncalibrated_validation_ece=ece,
+        )
+
+    return CalibrationDecision(
+        method="none",
+        reason=(
+            "Uncalibrated XGBoost validation calibration was not clearly worse than "
+            "frozen Logistic Regression; no calibrator applied."
+        ),
+        uncalibrated_validation_brier=brier,
+        uncalibrated_validation_log_loss=log_loss_value,
+        uncalibrated_validation_ece=ece,
+    )
+
+
+def select_runtime_model(
+    *,
+    logistic_regression_test_metrics: dict[str, Any],
+    xgboost_test_metrics: dict[str, Any],
+    logistic_regression_policy: dict[str, Any],
+    xgboost_policy: dict[str, Any],
+) -> ModelSelectionResult:
+    lr = {
+        "pr_auc": float(logistic_regression_test_metrics["pr_auc"]),
+        "brier_score": float(logistic_regression_test_metrics["brier_score"]),
+        "log_loss": float(logistic_regression_test_metrics["log_loss"]),
+        "expected_recovered": float(
+            logistic_regression_policy["expected_synthetic_recovered_minor"]
+        ),
+    }
+    xgb = {
+        "pr_auc": float(xgboost_test_metrics["pr_auc"]),
+        "brier_score": float(xgboost_test_metrics["brier_score"]),
+        "log_loss": float(xgboost_test_metrics["log_loss"]),
+        "expected_recovered": float(xgboost_policy["expected_synthetic_recovered_minor"]),
+    }
+
+    brier_material = MATERIALITY_THRESHOLDS["brier_absolute"]
+    log_loss_material = MATERIALITY_THRESHOLDS["log_loss_absolute"]
+    recovered_material = MATERIALITY_THRESHOLDS["expected_recovered_relative"]
+    brier_guard = GUARDRAIL_THRESHOLDS["brier_regression"]
+    log_loss_guard = GUARDRAIL_THRESHOLDS["log_loss_regression"]
+    recovered_guard = GUARDRAIL_THRESHOLDS["expected_recovered_regression_relative"]
+
+    materiality_checks: dict[str, dict[str, object]] = {
+        "pr_auc": {
+            "delta": xgb["pr_auc"] - lr["pr_auc"],
+            "required": MATERIALITY_THRESHOLDS["pr_auc_absolute"],
+            "passed": xgb["pr_auc"] >= lr["pr_auc"] + MATERIALITY_THRESHOLDS["pr_auc_absolute"],
+        },
+        "brier_score": {
+            "delta": lr["brier_score"] - xgb["brier_score"],
+            "required": brier_material,
+            "passed": xgb["brier_score"] <= lr["brier_score"] - brier_material,
+        },
+        "log_loss": {
+            "delta": lr["log_loss"] - xgb["log_loss"],
+            "required": log_loss_material,
+            "passed": xgb["log_loss"] <= lr["log_loss"] - log_loss_material,
+        },
+        "expected_recovered": {
+            "delta": xgb["expected_recovered"] / lr["expected_recovered"] - 1.0,
+            "required": recovered_material,
+            "passed": xgb["expected_recovered"]
+            >= lr["expected_recovered"] * (1.0 + recovered_material),
+        },
+    }
+
+    guardrail_checks: dict[str, dict[str, object]] = {
+        "pr_auc": {
+            "delta": xgb["pr_auc"] - lr["pr_auc"],
+            "limit": -GUARDRAIL_THRESHOLDS["pr_auc_regression"],
+            "failed": xgb["pr_auc"] < lr["pr_auc"] - GUARDRAIL_THRESHOLDS["pr_auc_regression"],
+        },
+        "brier_score": {
+            "delta": xgb["brier_score"] - lr["brier_score"],
+            "limit": brier_guard,
+            "failed": xgb["brier_score"] > lr["brier_score"] + brier_guard,
+        },
+        "log_loss": {
+            "delta": xgb["log_loss"] - lr["log_loss"],
+            "limit": log_loss_guard,
+            "failed": xgb["log_loss"] > lr["log_loss"] + log_loss_guard,
+        },
+        "expected_recovered": {
+            "delta": xgb["expected_recovered"] / lr["expected_recovered"] - 1.0,
+            "limit": -recovered_guard,
+            "failed": xgb["expected_recovered"]
+            < lr["expected_recovered"] * (1.0 - recovered_guard),
+        },
+    }
+
+    material_wins = tuple(
+        name for name, check in materiality_checks.items() if check["passed"]
+    )
+    guardrail_failures = tuple(
+        name for name, check in guardrail_checks.items() if check["failed"]
+    )
+
+    reason_codes: list[str] = []
+    if material_wins and not guardrail_failures:
+        selected = RUNTIME_MODEL_XGBOOST
+        reason_codes.append("material_win_without_guardrail_failure")
+    else:
+        selected = RUNTIME_MODEL_LOGISTIC_REGRESSION
+        if not material_wins:
+            reason_codes.append("no_material_win")
+        if guardrail_failures:
+            reason_codes.append("guardrail_failure")
+        if material_wins and guardrail_failures:
+            reason_codes.append("material_win_overridden_by_guardrail")
+
+    return ModelSelectionResult(
+        selected_model=selected,
+        selection_reason_codes=tuple(reason_codes),
+        material_wins=material_wins,
+        guardrail_failures=guardrail_failures,
+        materiality_checks=materiality_checks,
+        guardrail_checks=guardrail_checks,
+    )
+
+
+def runtime_model_label(selected_model: str) -> str:
+    if selected_model == RUNTIME_MODEL_XGBOOST:
+        return "SELECTED RUNTIME MODEL: XGBOOST"
+    return "SELECTED RUNTIME MODEL: LOGISTIC REGRESSION"
+
 
 def sha256_file(path: Path) -> str:
     import hashlib
@@ -832,6 +1062,23 @@ def parse_boolean_token(value: object) -> bool:
 
 def is_stop_action(action_type: object) -> bool:
     return str(action_type) == STOP_ACTION_VALUE
+
+
+def predictive_evaluation_membership(
+    frame: Any,
+    *,
+    split_name: str = "test",
+) -> tuple[tuple[str, str], ...]:
+    """Stable (case_id, action_type) tuples for predictive evaluation rows."""
+    split_rows = frame.loc[frame["split"] == split_name]
+    predictive = split_rows.loc[~split_rows["action_type"].map(is_stop_action)]
+    return tuple(
+        zip(
+            predictive["case_id"].astype(str),
+            predictive["action_type"].astype(str),
+            strict=True,
+        )
+    )
 
 
 def assert_feature_allowlist(columns: Sequence[str]) -> None:

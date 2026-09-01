@@ -1,0 +1,457 @@
+{
+  "action_types": [
+    "WAIT",
+    "RETRY_SAME_METHOD",
+    "REQUEST_ALTERNATE_PAYMENT_METHOD",
+    "CREATE_PAYMENT_LINK",
+    "SEND_RECOVERY_MESSAGE",
+    "ESCALATE_TO_HUMAN"
+  ],
+  "artifact_file": "/tmp/revloop-xgb-eval/xgboost_candidate.joblib",
+  "artifact_format_version": "revloop-model-bundle-v1",
+  "artifact_sha256": "0b89eb56446e4b5678c7673a065076cfad6c75e98e67484458ad37e8a86a2e38",
+  "boolean_feature_columns": [
+    "rail_degraded",
+    "same_method_recent_success",
+    "alternate_method_recent_success",
+    "is_subscription"
+  ],
+  "candidate_artifact_note": "Evaluated candidate binary stored at /tmp/revloop-xgb-eval/xgboost_candidate.joblib; not promoted to canonical runtime path because Logistic Regression was selected.",
+  "candidate_status": "rejected",
+  "categorical_feature_columns": [
+    "case_type",
+    "failure_category",
+    "payment_method",
+    "customer_segment",
+    "downtime_severity",
+    "action_type"
+  ],
+  "dataset_version": "synthetic_recovery_v1",
+  "deterministic_action_probabilities": {
+    "STOP": 0.0
+  },
+  "feature_columns": [
+    "amount_log1p",
+    "customer_tenure_days",
+    "successful_payments_90d",
+    "failed_payments_30d",
+    "payment_success_rate_90d",
+    "historical_recovery_rate",
+    "lifetime_value_log1p",
+    "hours_since_failure",
+    "retry_count_provider",
+    "recovery_attempts_so_far",
+    "contacts_last_24h",
+    "rail_degraded",
+    "same_method_recent_success",
+    "alternate_method_recent_success",
+    "is_subscription",
+    "case_type",
+    "failure_category",
+    "payment_method",
+    "customer_segment",
+    "downtime_severity",
+    "action_type"
+  ],
+  "feature_schema_version": "recovery_features_v1",
+  "frozen_logistic_regression_reference": {
+    "policy_expected_synthetic_recovered_minor": 1028844436,
+    "source_commit": "fd08bf7",
+    "test_metrics": {
+      "brier_score": 0.1564,
+      "log_loss": 0.4768,
+      "pr_auc": 0.5563,
+      "roc_auc": 0.7764
+    },
+    "validation_metrics": {
+      "brier_score": 0.1568,
+      "expected_calibration_error": 0.0075,
+      "log_loss": 0.4784,
+      "pr_auc": 0.5722,
+      "roc_auc": 0.7803
+    }
+  },
+  "library_versions": {
+    "joblib": "1.6.0",
+    "numpy": "2.2.6",
+    "pandas": "2.3.3",
+    "scikit-learn": "1.7.2",
+    "xgboost": "2.1.4"
+  },
+  "model_family": "xgboost",
+  "model_version": "xgb-v1.0.0",
+  "numeric_feature_columns": [
+    "amount_log1p",
+    "customer_tenure_days",
+    "successful_payments_90d",
+    "failed_payments_30d",
+    "payment_success_rate_90d",
+    "historical_recovery_rate",
+    "lifetime_value_log1p",
+    "hours_since_failure",
+    "retry_count_provider",
+    "recovery_attempts_so_far",
+    "contacts_last_24h"
+  ],
+  "selection_result": {
+    "guardrail_checks": {
+      "brier_score": {
+        "delta": -0.0010722120036791294,
+        "failed": false,
+        "limit": 0.003
+      },
+      "expected_recovered": {
+        "delta": 0.003124407235458815,
+        "failed": false,
+        "limit": -0.005
+      },
+      "log_loss": {
+        "delta": -0.0021617778302986945,
+        "failed": false,
+        "limit": 0.005
+      },
+      "pr_auc": {
+        "delta": 0.006544181800166693,
+        "failed": false,
+        "limit": -0.01
+      }
+    },
+    "guardrail_failures": [],
+    "material_wins": [],
+    "materiality_checks": {
+      "brier_score": {
+        "delta": 0.0010722120036791294,
+        "passed": false,
+        "required": 0.003
+      },
+      "expected_recovered": {
+        "delta": 0.003124407235458815,
+        "passed": false,
+        "required": 0.01
+      },
+      "log_loss": {
+        "delta": 0.0021617778302986945,
+        "passed": false,
+        "required": 0.008
+      },
+      "pr_auc": {
+        "delta": 0.006544181800166693,
+        "passed": false,
+        "required": 0.015
+      }
+    },
+    "selected_runtime_model": "logistic_regression",
+    "selected_runtime_model_label": "SELECTED RUNTIME MODEL: LOGISTIC REGRESSION",
+    "selection_reason_codes": [
+      "no_material_win"
+    ]
+  },
+  "split_seed": 20260904,
+  "summary_sha256": "4539f31ef7b97c2365f1cf4a6f4bd434452a9b2ca229c1bba9d9752deed49bc6",
+  "trained_at": "2026-09-01T10:12:56.842635+00:00",
+  "training_case_count": 10500,
+  "training_configuration": {
+    "boolean_preprocessing": [
+      "SimpleImputer(most_frequent)"
+    ],
+    "calibration_method": "none",
+    "calibration_reason": "Uncalibrated XGBoost validation calibration was not clearly worse than frozen Logistic Regression; no calibrator applied.",
+    "categorical_preprocessing": [
+      "SimpleImputer(constant=UNKNOWN)",
+      "OneHotEncoder(handle_unknown=ignore)"
+    ],
+    "colsample_bytree": 0.8,
+    "early_stopping_rounds": 50,
+    "estimator": "XGBClassifier",
+    "eval_metric": "logloss",
+    "learning_rate": 0.05,
+    "max_depth": 4,
+    "min_child_weight": 5,
+    "n_estimators": 800,
+    "n_jobs": 1,
+    "numeric_preprocessing": [
+      "SimpleImputer(median)"
+    ],
+    "objective": "binary:logistic",
+    "random_state": 20260901,
+    "reg_alpha": 0.0,
+    "reg_lambda": 1.0,
+    "stop_excluded_from_training": true,
+    "subsample": 0.8,
+    "tree_method": "hist"
+  },
+  "training_data_sha256": "f9c8e534b5907d03514b8c8494d004fed7d60d94c3591af90c40a0439fece170",
+  "training_details": {
+    "best_iteration": 159,
+    "best_score": 0.4786597935281197,
+    "calibration_method": "none",
+    "calibration_reason": "Uncalibrated XGBoost validation calibration was not clearly worse than frozen Logistic Regression; no calibrator applied.",
+    "configured_n_estimators": 800,
+    "early_stopping_metric": "logloss",
+    "early_stopping_rounds": 50,
+    "uncalibrated_validation_brier": 0.15681438077628848,
+    "uncalibrated_validation_ece": 0.00856524051142249,
+    "uncalibrated_validation_log_loss": 0.4786597935243356,
+    "uncalibrated_validation_metrics": {
+      "brier_score": 0.15681438077628848,
+      "calibration_bins": [
+        {
+          "count": 1470,
+          "empirical_recovery_rate": 0.05238095238095238,
+          "lower_bound": 0.0,
+          "mean_predicted_probability": 0.06490269303321838,
+          "upper_bound": 0.1
+        },
+        {
+          "count": 1603,
+          "empirical_recovery_rate": 0.14909544603867747,
+          "lower_bound": 0.1,
+          "mean_predicted_probability": 0.14635241031646729,
+          "upper_bound": 0.2
+        },
+        {
+          "count": 1170,
+          "empirical_recovery_rate": 0.24786324786324787,
+          "lower_bound": 0.2,
+          "mean_predicted_probability": 0.2474527508020401,
+          "upper_bound": 0.30000000000000004
+        },
+        {
+          "count": 764,
+          "empirical_recovery_rate": 0.3337696335078534,
+          "lower_bound": 0.30000000000000004,
+          "mean_predicted_probability": 0.34696516394615173,
+          "upper_bound": 0.4
+        },
+        {
+          "count": 604,
+          "empirical_recovery_rate": 0.44867549668874174,
+          "lower_bound": 0.4,
+          "mean_predicted_probability": 0.4457349479198456,
+          "upper_bound": 0.5
+        },
+        {
+          "count": 460,
+          "empirical_recovery_rate": 0.5565217391304348,
+          "lower_bound": 0.5,
+          "mean_predicted_probability": 0.5465317964553833,
+          "upper_bound": 0.6000000000000001
+        },
+        {
+          "count": 361,
+          "empirical_recovery_rate": 0.6759002770083102,
+          "lower_bound": 0.6000000000000001,
+          "mean_predicted_probability": 0.6474399566650391,
+          "upper_bound": 0.7000000000000001
+        },
+        {
+          "count": 176,
+          "empirical_recovery_rate": 0.7215909090909091,
+          "lower_bound": 0.7000000000000001,
+          "mean_predicted_probability": 0.7419650554656982,
+          "upper_bound": 0.8
+        },
+        {
+          "count": 31,
+          "empirical_recovery_rate": 0.9354838709677419,
+          "lower_bound": 0.8,
+          "mean_predicted_probability": 0.8351690173149109,
+          "upper_bound": 0.9
+        },
+        {
+          "count": 2,
+          "empirical_recovery_rate": 1.0,
+          "lower_bound": 0.9,
+          "mean_predicted_probability": 0.9126002788543701,
+          "upper_bound": 1.0
+        }
+      ],
+      "case_count": 2250,
+      "expected_calibration_error": 0.00856524051142249,
+      "log_loss": 0.4786597935243356,
+      "negative_count": 4851,
+      "per_action": {
+        "CREATE_PAYMENT_LINK": {
+          "mean_observed_label": 0.30600387346675273,
+          "mean_predicted_probability": 0.29865288734436035,
+          "positive_rate": 0.30600387346675273,
+          "roc_auc": 0.785891472868217,
+          "row_count": 1549
+        },
+        "ESCALATE_TO_HUMAN": {
+          "mean_observed_label": 0.21852731591448932,
+          "mean_predicted_probability": 0.23752225935459137,
+          "positive_rate": 0.21852731591448932,
+          "roc_auc": 0.8051407426985595,
+          "row_count": 421
+        },
+        "REQUEST_ALTERNATE_PAYMENT_METHOD": {
+          "mean_observed_label": 0.29750479846449135,
+          "mean_predicted_probability": 0.29340410232543945,
+          "positive_rate": 0.29750479846449135,
+          "roc_auc": 0.791059012476252,
+          "row_count": 1563
+        },
+        "RETRY_SAME_METHOD": {
+          "mean_observed_label": 0.2644230769230769,
+          "mean_predicted_probability": 0.26665470004081726,
+          "positive_rate": 0.2644230769230769,
+          "roc_auc": 0.723202614379085,
+          "row_count": 416
+        },
+        "SEND_RECOVERY_MESSAGE": {
+          "mean_observed_label": 0.267027027027027,
+          "mean_predicted_probability": 0.290520578622818,
+          "positive_rate": 0.267027027027027,
+          "roc_auc": 0.7509524321354782,
+          "row_count": 925
+        },
+        "WAIT": {
+          "mean_observed_label": 0.22750424448217318,
+          "mean_predicted_probability": 0.22433842718601227,
+          "positive_rate": 0.22750424448217318,
+          "roc_auc": 0.7817487653308548,
+          "row_count": 1767
+        }
+      },
+      "positive_count": 1790,
+      "positive_rate": 0.269537720222858,
+      "pr_auc": 0.5713617374989134,
+      "roc_auc": 0.7805938762842195,
+      "row_count": 6641
+    },
+    "validation_calibration_fit_metrics": null
+  },
+  "training_row_count": 30981,
+  "training_seed": 20260901,
+  "validation_case_count": 2250,
+  "validation_metrics": {
+    "brier_score": 0.15681438077628848,
+    "calibration_bins": [
+      {
+        "count": 1470,
+        "empirical_recovery_rate": 0.05238095238095238,
+        "lower_bound": 0.0,
+        "mean_predicted_probability": 0.06490269303321838,
+        "upper_bound": 0.1
+      },
+      {
+        "count": 1603,
+        "empirical_recovery_rate": 0.14909544603867747,
+        "lower_bound": 0.1,
+        "mean_predicted_probability": 0.14635241031646729,
+        "upper_bound": 0.2
+      },
+      {
+        "count": 1170,
+        "empirical_recovery_rate": 0.24786324786324787,
+        "lower_bound": 0.2,
+        "mean_predicted_probability": 0.2474527508020401,
+        "upper_bound": 0.30000000000000004
+      },
+      {
+        "count": 764,
+        "empirical_recovery_rate": 0.3337696335078534,
+        "lower_bound": 0.30000000000000004,
+        "mean_predicted_probability": 0.34696516394615173,
+        "upper_bound": 0.4
+      },
+      {
+        "count": 604,
+        "empirical_recovery_rate": 0.44867549668874174,
+        "lower_bound": 0.4,
+        "mean_predicted_probability": 0.4457349479198456,
+        "upper_bound": 0.5
+      },
+      {
+        "count": 460,
+        "empirical_recovery_rate": 0.5565217391304348,
+        "lower_bound": 0.5,
+        "mean_predicted_probability": 0.5465317964553833,
+        "upper_bound": 0.6000000000000001
+      },
+      {
+        "count": 361,
+        "empirical_recovery_rate": 0.6759002770083102,
+        "lower_bound": 0.6000000000000001,
+        "mean_predicted_probability": 0.6474399566650391,
+        "upper_bound": 0.7000000000000001
+      },
+      {
+        "count": 176,
+        "empirical_recovery_rate": 0.7215909090909091,
+        "lower_bound": 0.7000000000000001,
+        "mean_predicted_probability": 0.7419650554656982,
+        "upper_bound": 0.8
+      },
+      {
+        "count": 31,
+        "empirical_recovery_rate": 0.9354838709677419,
+        "lower_bound": 0.8,
+        "mean_predicted_probability": 0.8351690173149109,
+        "upper_bound": 0.9
+      },
+      {
+        "count": 2,
+        "empirical_recovery_rate": 1.0,
+        "lower_bound": 0.9,
+        "mean_predicted_probability": 0.9126002788543701,
+        "upper_bound": 1.0
+      }
+    ],
+    "case_count": 2250,
+    "expected_calibration_error": 0.00856524051142249,
+    "log_loss": 0.4786597935243356,
+    "negative_count": 4851,
+    "per_action": {
+      "CREATE_PAYMENT_LINK": {
+        "mean_observed_label": 0.30600387346675273,
+        "mean_predicted_probability": 0.29865288734436035,
+        "positive_rate": 0.30600387346675273,
+        "roc_auc": 0.785891472868217,
+        "row_count": 1549
+      },
+      "ESCALATE_TO_HUMAN": {
+        "mean_observed_label": 0.21852731591448932,
+        "mean_predicted_probability": 0.23752225935459137,
+        "positive_rate": 0.21852731591448932,
+        "roc_auc": 0.8051407426985595,
+        "row_count": 421
+      },
+      "REQUEST_ALTERNATE_PAYMENT_METHOD": {
+        "mean_observed_label": 0.29750479846449135,
+        "mean_predicted_probability": 0.29340410232543945,
+        "positive_rate": 0.29750479846449135,
+        "roc_auc": 0.791059012476252,
+        "row_count": 1563
+      },
+      "RETRY_SAME_METHOD": {
+        "mean_observed_label": 0.2644230769230769,
+        "mean_predicted_probability": 0.26665470004081726,
+        "positive_rate": 0.2644230769230769,
+        "roc_auc": 0.723202614379085,
+        "row_count": 416
+      },
+      "SEND_RECOVERY_MESSAGE": {
+        "mean_observed_label": 0.267027027027027,
+        "mean_predicted_probability": 0.290520578622818,
+        "positive_rate": 0.267027027027027,
+        "roc_auc": 0.7509524321354782,
+        "row_count": 925
+      },
+      "WAIT": {
+        "mean_observed_label": 0.22750424448217318,
+        "mean_predicted_probability": 0.22433842718601227,
+        "positive_rate": 0.22750424448217318,
+        "roc_auc": 0.7817487653308548,
+        "row_count": 1767
+      }
+    },
+    "positive_count": 1790,
+    "positive_rate": 0.269537720222858,
+    "pr_auc": 0.5713617374989134,
+    "roc_auc": 0.7805938762842195,
+    "row_count": 6641
+  },
+  "validation_row_count": 6641
+}
