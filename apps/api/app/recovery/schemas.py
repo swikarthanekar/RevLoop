@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.domain.enums import CaseType, FailureCategory, RecoveryActionType
 
@@ -204,3 +205,63 @@ class FeatureBuildInput(BaseModel):
         if recovered is not None and total is not None and recovered > total:
             raise ValueError("prior_recovery_cases_recovered cannot exceed total.")
         return recovered
+
+
+class CandidateGenerationContext(BaseModel):
+    """Explicit inputs for deterministic candidate generation."""
+
+    model_config = ConfigDict(frozen=True)
+
+    failure_category: FailureCategory
+    case_type: CaseType
+    subscription_status: str | None = None
+    provider_retries_active: bool = False
+    uncertain_provider_state: bool = False
+    active_payment_rail_downtime: bool = False
+    payment_link_data_sufficient: bool = False
+
+    @model_validator(mode="after")
+    def validate_payment_case_has_no_subscription_state(self) -> CandidateGenerationContext:
+        if self.case_type != CaseType.PAYMENT_FAILURE:
+            return self
+        if self.subscription_status is not None:
+            raise ValueError("subscription_status is only valid for SUBSCRIPTION_FAILURE cases.")
+        if self.provider_retries_active:
+            raise ValueError(
+                "provider_retries_active is only valid for SUBSCRIPTION_FAILURE cases."
+            )
+        return self
+
+
+class ERVBreakdown(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    success_probability: Decimal = Field(ge=Decimal("0"), le=Decimal("1"))
+    expected_recovered_minor: int = Field(ge=0)
+    action_cost_minor: int = Field(ge=0)
+    fatigue_penalty_minor: int = Field(ge=0)
+    operational_risk_penalty_minor: int = Field(ge=0)
+    delay_penalty_minor: int = Field(ge=0)
+    expected_value_minor: int
+
+
+class RecommendationCandidate(BaseModel):
+    """Scored candidate prior to ranking."""
+
+    model_config = ConfigDict(frozen=True)
+
+    action_type: RecoveryActionType
+    success_probability: Decimal = Field(ge=Decimal("0"), le=Decimal("1"))
+    expected_recovered_minor: int = Field(ge=0)
+    expected_value_minor: int
+    confidence: Decimal = Field(ge=Decimal("0"), le=Decimal("1"))
+    eligible: bool
+    requires_approval: bool
+    policy_reasons: tuple[str, ...] = ()
+    operational_burden: int = Field(ge=0)
+
+
+class RankedRecommendationCandidate(RecommendationCandidate):
+    model_config = ConfigDict(frozen=True)
+
+    rank: int = Field(ge=1)
