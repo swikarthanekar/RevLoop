@@ -50,5 +50,6 @@ def test_registered_api_v1_routes_after_cleanup() -> None:
         "/api/v1/dashboard/summary",
         "/api/v1/recovery-cases",
         "/api/v1/recovery-cases/{case_id}",
+        "/api/v1/recovery-cases/{case_id}/analyze",
         "/api/v1/recovery-cases/{case_id}/timeline",
     ]

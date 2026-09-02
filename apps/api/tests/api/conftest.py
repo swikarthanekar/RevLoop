@@ -16,9 +16,11 @@ from app.demo.constants import (
     DEMO_ORGANIZATION_ID,
 )
 from app.demo.seed import seed_demo_database
-from app.domain.enums import UserRole
+from app.domain.enums import RecoveryCaseStatus, UserRole
 from app.main import create_app
+from app.models.recovery_case import RecoveryCase
 from tests.demo.conftest import postgres_available, postgres_url
+from tests.workflows.helpers import create_case, create_customer
 
 pytestmark = pytest.mark.skipif(
     not postgres_available(),
@@ -145,3 +147,30 @@ def empty_org_client(seeded_database) -> Generator[TestClient, None, None]:
 @pytest.fixture
 def demo_org_id() -> str:
     return str(DEMO_ORGANIZATION_ID)
+
+
+@pytest.fixture
+def analyzable_case(db_session: Session) -> Generator[RecoveryCase, None, None]:
+    customer = create_customer(db_session, organization_id=DEMO_ORGANIZATION_ID)
+    case = create_case(
+        db_session,
+        organization_id=DEMO_ORGANIZATION_ID,
+        customer_id=customer.id,
+        status=RecoveryCaseStatus.DETECTED,
+    )
+    db_session.commit()
+    yield case
+
+
+@pytest.fixture
+def session_factory(seeded_database):
+    return sessionmaker(bind=seeded_database, autoflush=False, autocommit=False)
+
+
+@pytest.fixture
+def fresh_db_session(session_factory) -> Generator[Session, None, None]:
+    session = session_factory()
+    try:
+        yield session
+    finally:
+        session.close()

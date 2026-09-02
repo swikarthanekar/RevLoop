@@ -2,11 +2,31 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.domain.enums import RecoveryActionType
 from app.recovery.schemas import FEATURE_SCHEMA_VERSION
+
+
+class ActionProbability(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    action_type: RecoveryActionType
+    probability: float = Field(ge=0.0, le=1.0)
+
+
+class ModelInferenceResult(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    model_version: str
+    model_family: str
+    feature_schema_version: str
+    artifact_sha256: str
+    source: Literal["model", "fallback"]
+    fallback_reason: str | None = None
+    probabilities: tuple[ActionProbability, ...]
 
 
 class ModelBundleMetadata(BaseModel):
