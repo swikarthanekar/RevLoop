@@ -65,3 +65,7 @@ class RazorpayTimeoutUnknownResult(RazorpayApiError):
 
 class RazorpayNotFoundError(RazorpayApiError):
     """Raised when the requested Razorpay resource does not exist."""
+
+
+class PaymentLinkSideEffectUnknownError(RazorpayApiError):
+    """Raised when a Payment Link POST may have succeeded but response evidence is unusable."""

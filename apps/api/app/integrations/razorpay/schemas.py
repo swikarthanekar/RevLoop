@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 def unix_to_utc(value: int | None) -> datetime | None:
@@ -233,3 +233,73 @@ class PaymentDowntime(BaseModel):
             end_at=end_at,
             instrument=instrument,
         )
+
+
+class PaymentLinkCreateResult(BaseModel):
+    """Validated Payment Link evidence from POST /v1/payment_links."""
+
+    id: str
+    reference_id: str
+    amount: int
+    currency: str
+    status: str
+    short_url: str | None = None
+    accept_partial: bool | None = None
+
+    @classmethod
+    def from_provider_json(cls, payload: dict[str, Any]) -> PaymentLinkCreateResult:
+        link_id = payload.get("id")
+        if not isinstance(link_id, str) or not link_id.strip():
+            raise ValueError("payment link id is required")
+        reference_id = payload.get("reference_id")
+        if not isinstance(reference_id, str) or not reference_id.strip():
+            raise ValueError("payment link reference_id is required")
+        amount = payload.get("amount")
+        if not isinstance(amount, int):
+            raise ValueError("payment link amount must be integer minor units")
+        currency = payload.get("currency")
+        if not isinstance(currency, str) or not currency.strip():
+            raise ValueError("payment link currency is required")
+        status = payload.get("status")
+        if not isinstance(status, str) or not status.strip():
+            raise ValueError("payment link status is required")
+        short_url = payload.get("short_url")
+        accept_partial = payload.get("accept_partial")
+        return cls(
+            id=link_id.strip(),
+            reference_id=reference_id.strip(),
+            amount=amount,
+            currency=currency.strip().upper(),
+            status=status.strip().lower(),
+            short_url=(
+                short_url.strip() if isinstance(short_url, str) and short_url.strip() else None
+            ),
+            accept_partial=bool(accept_partial) if isinstance(accept_partial, bool) else None,
+        )
+
+
+class PaymentLinkLookupResult(BaseModel):
+    """Result of GET /v1/payment_links reference reconciliation."""
+
+    model_config = ConfigDict(frozen=True)
+
+    status: str
+    links: tuple[PaymentLinkCreateResult, ...] = ()
+
+    @classmethod
+    def from_collection_json(cls, payload: dict[str, Any]) -> PaymentLinkLookupResult:
+        items = payload.get("items")
+        if items is None:
+            raise ValueError("payment link collection items are required")
+        if not isinstance(items, list):
+            raise ValueError("payment link collection items must be a list")
+        parsed: list[PaymentLinkCreateResult] = []
+        for item in items:
+            if not isinstance(item, dict):
+                raise ValueError("payment link collection item must be an object")
+            parsed.append(PaymentLinkCreateResult.from_provider_json(item))
+        if len(parsed) == 0:
+            return cls(status="not_found", links=())
+        if len(parsed) == 1:
+            return cls(status="matched", links=(parsed[0],))
+        return cls(status="ambiguous", links=tuple(parsed))

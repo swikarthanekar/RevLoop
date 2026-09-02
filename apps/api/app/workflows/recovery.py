@@ -11,7 +11,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
-from app.domain.enums import AnalysisReason, AuditActorType, RecoveryCaseStatus
+from app.domain.enums import AnalysisReason, AuditActorType, RecoveryActionType, RecoveryCaseStatus
 from app.recovery.service import (
     AnalysisComputationResult,
     InsufficientCaseDataError,
@@ -252,6 +252,96 @@ class RecoveryAnalysisWorkflowService:
             context=completion_context,
         )
 
+        return AnalyzeCaseWorkflowResult(
+            case_id=case_id,
+            analysis_run_id=analysis_run_id,
+            status=completion.new_status,
+            computation=computation,
+        )
+
+    def complete_immediate_reanalysis(
+        self,
+        *,
+        case_id: UUID,
+        organization_id: UUID,
+        excluded_action_types: frozenset[RecoveryActionType],
+        actor_type: AuditActorType,
+        actor_id: str | None,
+        reason: str,
+    ) -> AnalyzeCaseWorkflowResult:
+        """Run analysis from an already-ANALYZING case without a new entry transition."""
+        case = self._require_case(case_id=case_id, organization_id=organization_id)
+        if RecoveryCaseStatus(case.status) != RecoveryCaseStatus.ANALYZING:
+            raise InvalidCaseStateForAnalysisError(
+                f"Immediate reanalysis requires ANALYZING; got {case.status}."
+            )
+
+        analysis_run_id = uuid.uuid4()
+        try:
+            computation = self._analysis_service.compute_analysis(
+                case=case,
+                analysis_run_id=analysis_run_id,
+                excluded_action_types=excluded_action_types,
+            )
+            self._analysis_service.persist_analysis(case=case, result=computation)
+        except InsufficientCaseDataError:
+            self._session.rollback()
+            finalize_terminal_analysis_failure(
+                self._session,
+                case_id=case_id,
+                organization_id=organization_id,
+                reason=TERMINAL_REASON_INSUFFICIENT_CASE_DATA,
+                actor_type=actor_type,
+                actor_id=actor_id,
+                state_machine=self._state_machine,
+                case_repo=self._case_repo,
+            )
+            raise
+        except ModelUnavailableError:
+            self._session.rollback()
+            finalize_terminal_analysis_failure(
+                self._session,
+                case_id=case_id,
+                organization_id=organization_id,
+                reason=TERMINAL_REASON_MODEL_UNAVAILABLE,
+                actor_type=actor_type,
+                actor_id=actor_id,
+                state_machine=self._state_machine,
+                case_repo=self._case_repo,
+            )
+            raise
+        except Exception:
+            self._session.rollback()
+            raise
+
+        case = self._require_case(case_id=case_id, organization_id=organization_id)
+        completion_metadata = {
+            "model_version": computation.inference.model_version,
+            "model_family": computation.inference.model_family,
+            "feature_schema_version": computation.inference.feature_schema_version,
+            "artifact_sha256": computation.inference.artifact_sha256,
+            "inference_source": computation.inference.source,
+            "excluded_action_types": sorted(action.value for action in excluded_action_types),
+        }
+        if computation.inference.fallback_reason:
+            completion_metadata["fallback_reason"] = computation.inference.fallback_reason
+
+        completion_context = TransitionContext(
+            organization_id=organization_id,
+            actor_type=actor_type,
+            actor_id=actor_id,
+            analysis_run_id=analysis_run_id,
+            reason=reason,
+            metadata=completion_metadata,
+        )
+        completion = self._state_machine.transition_case(
+            self._session,
+            case_id=case_id,
+            organization_id=organization_id,
+            expected_version=case.version,
+            event=RecoveryEvent.ANALYSIS_COMPLETED,
+            context=completion_context,
+        )
         return AnalyzeCaseWorkflowResult(
             case_id=case_id,
             analysis_run_id=analysis_run_id,

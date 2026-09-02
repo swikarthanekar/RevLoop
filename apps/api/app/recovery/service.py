@@ -253,9 +253,11 @@ class RecoveryAnalysisService:
         case: RecoveryCase,
         analysis_run_id: UUID | None = None,
         current_time: datetime | None = None,
+        excluded_action_types: frozenset[RecoveryActionType] | None = None,
     ) -> AnalysisComputationResult:
         run_id = analysis_run_id or uuid.uuid4()
         now = current_time or _utcnow()
+        exclusions = excluded_action_types or frozenset()
 
         customer = self._load_customer(case)
         transaction, subscription = self._load_revenue_source(case)
@@ -278,6 +280,12 @@ class RecoveryAnalysisService:
             downtime=downtime,
         )
         candidate_actions = generate_candidates(candidate_context)
+        if exclusions:
+            candidate_actions = tuple(
+                action for action in candidate_actions if action not in exclusions
+            )
+            if RecoveryActionType.STOP not in candidate_actions:
+                candidate_actions = (*candidate_actions, RecoveryActionType.STOP)
 
         base_features = self._build_case_features(
             case=case,

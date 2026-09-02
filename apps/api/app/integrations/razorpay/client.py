@@ -177,6 +177,39 @@ class RazorpayClient:
         assert last_error is not None
         raise last_error
 
+    def post_json(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
+        """Single-attempt POST for mutating Razorpay operations (no automatic retry)."""
+        try:
+            response = self._client.post(path, json=body)
+        except httpx.TimeoutException as exc:
+            raise RazorpayTimeoutUnknownResult("Razorpay write timed out.") from exc
+        except httpx.TransportError as exc:
+            raise RazorpayTransientError("Razorpay transport failure.") from exc
+
+        if response.status_code in {401, 403}:
+            raise RazorpayAuthenticationError("Razorpay authentication failed.")
+        if response.status_code == 400:
+            raise RazorpayValidationError("Razorpay rejected the request.")
+        if response.status_code == 404:
+            raise RazorpayNotFoundError("Razorpay resource not found.")
+        if response.status_code == 429:
+            raise RazorpayRateLimitError("Razorpay rate limit exceeded.")
+        if response.status_code >= 500:
+            raise RazorpayTransientError("Razorpay server error.")
+
+        if response.status_code >= 400:
+            raise RazorpayValidationError(
+                f"Razorpay request failed with status {response.status_code}."
+            )
+
+        try:
+            payload = response.json()
+        except json.JSONDecodeError as exc:
+            raise RazorpayValidationError("Razorpay response is not valid JSON.") from exc
+        if not isinstance(payload, dict):
+            raise RazorpayValidationError("Razorpay response must be a JSON object.")
+        return payload
+
     def get_payment_path(self, payment_id: str) -> str:
         return f"/v1/payments/{_encode_provider_id(payment_id)}"
 
@@ -185,3 +218,10 @@ class RazorpayClient:
 
     def get_downtime_path(self, downtime_id: str) -> str:
         return f"/v1/payments/downtimes/{_encode_provider_id(downtime_id)}"
+
+    def get_payment_links_path(self) -> str:
+        return "/v1/payment_links"
+
+    def get_payment_links_by_reference_path(self, reference_id: str) -> str:
+        encoded = quote(reference_id.strip(), safe="")
+        return f"/v1/payment_links/?reference_id={encoded}"
