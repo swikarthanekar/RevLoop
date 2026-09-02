@@ -33,6 +33,15 @@ class CandidateRecommendationResponse(SelectedRecommendationResponse):
     policy_eligible: bool
 
 
+class RecommendationExplanationResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    summary: str
+    evidence: list[str]
+    safety: list[str]
+    customer_impact: str | None = None
+
+
 class AnalyzeRecoveryCaseResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -41,3 +50,5 @@ class AnalyzeRecoveryCaseResponse(BaseModel):
     status: RecoveryCaseStatus
     selected: SelectedRecommendationResponse | None
     candidates: list[CandidateRecommendationResponse]
+    explanation: RecommendationExplanationResponse | None = None
+    explanation_source: str | None = None

@@ -47,6 +47,8 @@ class Settings(BaseSettings):
 
     llm_provider: str = "gemini"
     gemini_api_key: SecretStr | None = Field(default=None)
+    gemini_model_name: str = "gemini-3.6-flash"
+    gemini_timeout_seconds: float = 3.0
 
     model_bundle_path: Path = Path("./models/recovery_model_v1.joblib")
 

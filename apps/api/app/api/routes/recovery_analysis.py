@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.ai.explanations import RecommendationExplanationService
 from app.core.auth import AuthContext, get_current_user
 from app.core.config import Settings, get_settings
 from app.core.deps import get_db
@@ -22,6 +23,7 @@ from app.schemas.recovery_analysis import (
     AnalyzeRecoveryCaseRequest,
     AnalyzeRecoveryCaseResponse,
     CandidateRecommendationResponse,
+    RecommendationExplanationResponse,
     SelectedRecommendationResponse,
 )
 from app.workflows.exceptions import (
@@ -80,6 +82,13 @@ def _candidate_responses(candidates) -> list[CandidateRecommendationResponse]:
     ]
 
 
+_EXPLANATION_SERVICE_FACTORY = RecommendationExplanationService
+
+
+def _build_explanation_service(settings: Settings) -> RecommendationExplanationService:
+    return _EXPLANATION_SERVICE_FACTORY(settings=settings)
+
+
 @router.post("/{case_id}/analyze", response_model=AnalyzeRecoveryCaseResponse)
 def analyze_recovery_case(
     case_id: UUID,
@@ -130,10 +139,30 @@ def analyze_recovery_case(
             status_code=409,
         ) from exc
 
+    explanation_payload = None
+    explanation_source = None
+    if result.computation.selected is not None:
+        explanation_service = _build_explanation_service(settings)
+        explanation_result = explanation_service.enrich(
+            db,
+            case_id=case_id,
+            organization_id=current_user.organization_id,
+            analysis_run_id=result.analysis_run_id,
+        )
+        explanation_payload = RecommendationExplanationResponse(
+            summary=explanation_result.explanation.summary,
+            evidence=list(explanation_result.explanation.evidence),
+            safety=list(explanation_result.explanation.safety),
+            customer_impact=explanation_result.explanation.customer_impact,
+        )
+        explanation_source = explanation_result.explanation_source
+
     return AnalyzeRecoveryCaseResponse(
         case_id=result.case_id,
         analysis_run_id=result.analysis_run_id,
         status=result.status,
         selected=_selected_response(result.computation.selected),
         candidates=_candidate_responses(result.computation.ranked_candidates),
+        explanation=explanation_payload,
+        explanation_source=explanation_source,
     )
