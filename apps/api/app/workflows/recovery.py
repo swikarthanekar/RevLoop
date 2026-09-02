@@ -10,6 +10,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.core.config import Settings, get_settings
 from app.domain.enums import AnalysisReason, AuditActorType, RecoveryCaseStatus
 from app.recovery.service import (
     AnalysisComputationResult,
@@ -131,13 +132,18 @@ class RecoveryAnalysisWorkflowService:
         self,
         session: Session,
         *,
+        settings: Settings | None = None,
         state_machine: RecoveryCaseStateMachine | None = None,
         analysis_service: RecoveryAnalysisService | None = None,
         case_repo: RecoveryCaseWorkflowRepository | None = None,
     ) -> None:
         self._session = session
         self._state_machine = state_machine or RecoveryCaseStateMachine()
-        self._analysis_service = analysis_service or RecoveryAnalysisService(session)
+        runtime_settings = settings or get_settings()
+        self._analysis_service = analysis_service or RecoveryAnalysisService(
+            session,
+            settings=runtime_settings,
+        )
         self._case_repo = case_repo or RecoveryCaseWorkflowRepository()
 
     def analyze_recovery_case(

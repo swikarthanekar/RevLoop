@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.auth import AuthContext, get_current_user
+from app.core.config import Settings, get_settings
 from app.core.deps import get_db
 from app.core.errors import AppError, ForbiddenError, NotFoundError
 from app.domain.enums import AuditActorType, UserRole
@@ -85,8 +86,9 @@ def analyze_recovery_case(
     request: AnalyzeRecoveryCaseRequest,
     current_user: Annotated[AuthContext, Depends(require_analysis_role)],
     db: Annotated[Session, Depends(get_db)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> AnalyzeRecoveryCaseResponse:
-    workflow = RecoveryAnalysisWorkflowService(db)
+    workflow = RecoveryAnalysisWorkflowService(db, settings=settings)
     try:
         result = workflow.analyze_recovery_case(
             case_id=case_id,

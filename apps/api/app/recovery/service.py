@@ -12,11 +12,17 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.config import Settings, get_settings
 from app.domain.enums import (
     AnalysisReason,
     CaseType,
     RecoveryActionType,
     RecoveryCaseStatus,
+)
+from app.integrations.razorpay.client import RazorpayClient
+from app.integrations.razorpay.provider import (
+    RazorpayClientFactory,
+    acquire_razorpay_read_client,
 )
 from app.ml.fallback import FALLBACK_MODEL_VERSION, get_fallback_probability
 from app.ml.schemas import ActionProbability, ModelInferenceResult
@@ -35,6 +41,7 @@ from app.policies.engine import evaluate_policy
 from app.policies.schemas import MerchantPolicyConfig, PolicyEvaluationContext
 from app.recovery.candidates import generate_candidates
 from app.recovery.confidence import calculate_confidence
+from app.recovery.context import resolve_downtime_context
 from app.recovery.erv import calculate_erv
 from app.recovery.failure_normalizer import (
     normalize_payment_failure,
@@ -204,13 +211,41 @@ class RecoveryAnalysisService:
         self,
         session: Session,
         *,
+        settings: Settings | None = None,
         propensity_model: RecoveryPropensityModelService | None = None,
         allow_model_fallback: bool = True,
+        razorpay_client: RazorpayClient | None = None,
+        razorpay_client_factory: RazorpayClientFactory | None = None,
     ) -> None:
         self._session = session
+        self._settings = settings or get_settings()
         self._propensity_model = propensity_model or RecoveryPropensityModelService()
         self._allow_model_fallback = allow_model_fallback
         self._analysis_repo = RecoveryAnalysisRepository(session)
+        self._razorpay_client = razorpay_client
+        self._razorpay_client_factory = razorpay_client_factory
+
+    def _resolve_downtime_context(self, transaction: Transaction | None) -> DowntimeContext:
+        handle = acquire_razorpay_read_client(
+            self._settings,
+            injected=self._razorpay_client,
+            factory=self._razorpay_client_factory,
+        )
+        if handle is None:
+            return resolve_downtime_context(
+                None,
+                transaction,
+                lookup_configured=False,
+            )
+        try:
+            return resolve_downtime_context(
+                handle.client,
+                transaction,
+                lookup_configured=True,
+            )
+        finally:
+            if handle.owned:
+                handle.client.close()
 
     def compute_analysis(
         self,
@@ -229,11 +264,18 @@ class RecoveryAnalysisService:
         recovery_attempts, contacts_last_24h = self._load_recovery_counters(case, now)
         prior_total, prior_recovered = self._load_prior_recovery_counts(case, customer.id)
 
-        normalization = self._normalize_failure(case, transaction, subscription)
+        downtime = self._resolve_downtime_context(transaction)
+        normalization = self._normalize_failure(
+            case,
+            transaction,
+            subscription,
+            downtime=downtime,
+        )
         candidate_context = self._build_candidate_context(
             case,
             normalization.failure_category,
             subscription,
+            downtime=downtime,
         )
         candidate_actions = generate_candidates(candidate_context)
 
@@ -249,6 +291,7 @@ class RecoveryAnalysisService:
             prior_total=prior_total,
             prior_recovered=prior_recovered,
             current_time=now,
+            downtime=downtime,
         )
         inference = self._score_actions(
             features=base_features,
@@ -545,6 +588,8 @@ class RecoveryAnalysisService:
         case: RecoveryCase,
         transaction: Transaction | None,
         subscription: Subscription | None,
+        *,
+        downtime: DowntimeContext | None = None,
     ):
         if transaction is not None:
             evidence = PaymentFailureEvidence(
@@ -554,12 +599,8 @@ class RecoveryAnalysisService:
                 error_step=transaction.error_step,
                 payment_method=transaction.payment_method,
             )
-            downtime = DowntimeContext(
-                lookup_status="NO_DOWNTIME",
-                rail_degraded=case.failure_category == "PAYMENT_RAIL_DOWNTIME",
-                severity="high" if case.failure_category == "PAYMENT_RAIL_DOWNTIME" else "none",
-            )
-            return normalize_payment_failure(evidence, downtime=downtime)
+            downtime_ctx = downtime or DowntimeContext()
+            return normalize_payment_failure(evidence, downtime=downtime_ctx)
         assert subscription is not None
         metadata = subscription.metadata_ or {}
         evidence = SubscriptionFailureEvidence(
@@ -575,15 +616,23 @@ class RecoveryAnalysisService:
         case: RecoveryCase,
         failure_category,
         subscription: Subscription | None,
+        *,
+        downtime: DowntimeContext | None = None,
     ) -> CandidateGenerationContext:
         from app.domain.enums import FailureCategory
 
         category = FailureCategory(failure_category)
+        active_downtime = (
+            downtime is not None
+            and downtime.lookup_status == "KNOWN"
+            and downtime.rail_degraded
+        )
         if case.case_type == CaseType.PAYMENT_FAILURE.value:
             return CandidateGenerationContext(
                 failure_category=category,
                 case_type=CaseType.PAYMENT_FAILURE,
-                active_payment_rail_downtime=category == FailureCategory.PAYMENT_RAIL_DOWNTIME,
+                active_payment_rail_downtime=active_downtime
+                or category == FailureCategory.PAYMENT_RAIL_DOWNTIME,
                 payment_link_data_sufficient=True,
             )
         assert subscription is not None
@@ -592,7 +641,8 @@ class RecoveryAnalysisService:
             case_type=CaseType.SUBSCRIPTION_FAILURE,
             subscription_status=subscription.status,
             provider_retries_active=subscription.status == SUBSCRIPTION_PENDING_STATUS,
-            active_payment_rail_downtime=category == FailureCategory.PAYMENT_RAIL_DOWNTIME,
+            active_payment_rail_downtime=active_downtime
+            or category == FailureCategory.PAYMENT_RAIL_DOWNTIME,
             payment_link_data_sufficient=True,
         )
 
@@ -610,6 +660,7 @@ class RecoveryAnalysisService:
         prior_total: int | None,
         prior_recovered: int | None,
         current_time: datetime,
+        downtime: DowntimeContext | None = None,
     ) -> RecoveryFeaturesV1:
         feature_input = FeatureBuildInput(
             case=CaseSnapshot(
@@ -668,6 +719,7 @@ class RecoveryAnalysisService:
             contacts_last_24h=contacts_last_24h,
             prior_recovery_cases_total=prior_total,
             prior_recovery_cases_recovered=prior_recovered,
+            downtime=downtime,
         )
         return build_recovery_features_v1(feature_input)
 
