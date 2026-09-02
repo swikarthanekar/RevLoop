@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest"
+    "test": "vitest",
+    "test:run": "vitest --run",
+    "api:generate": "node scripts/generate-openapi-types.mjs",
+    "api:check": "npm run api:generate && git diff --exit-code -- types/generated/api.ts"
   },
   "dependencies": {
     "next": "^15.5.24",
@@ -17,13 +20,17 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.1.1",
     "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^9",
     "eslint-config-next": "^15.5.24",
     "jsdom": "^29.1.1",
+    "openapi-typescript": "^7.10.1",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",

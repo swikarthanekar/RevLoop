@@ -17,5 +17,10 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+*:focus-visible {
+  outline: 2px solid #737373;
+  outline-offset: 2px;
 }
