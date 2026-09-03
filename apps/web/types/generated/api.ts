@@ -38,6 +38,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/demo/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Demo
+         * @description Restore the canonical deterministic demo state.
+         *
+         *     `seed_demo_database(reset=True)` deletes the demo tenant and reseeds it in a
+         *     single transaction, so a failure mid-way rolls back rather than publishing a
+         *     half-reset database.
+         */
+        post: operations["reset_demo_api_v1_demo_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/demo/run-batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Batch
+         * @description Run the canonical synthetic policy simulation over the canonical cohort.
+         *
+         *     Pure simulation: no database read of business tables, no provider adapter,
+         *     no writes, so repeated submissions cannot accumulate state.
+         *
+         *     Declared `def` rather than `async def` on purpose. The work is synchronous
+         *     CPU-bound scoring that takes seconds, so FastAPI runs it in its threadpool
+         *     instead of blocking the event loop. The reset route stays `async def`
+         *     because its work is short.
+         */
+        post: operations["run_batch_api_v1_demo_run_batch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recovery-actions/{action_id}/approve": {
         parameters: {
             query?: never;
@@ -421,6 +473,62 @@ export interface components {
             /** Source Label */
             source_label: string;
         };
+        /**
+         * DatasetProvenanceModel
+         * @description Which synthetic world and cohort the evaluation ran against.
+         */
+        DatasetProvenanceModel: {
+            /** Case Count */
+            case_count: number;
+            /** Dataset Version */
+            dataset_version: string;
+            /** Seed */
+            seed: number;
+            /** Split */
+            split: string;
+        };
+        /**
+         * DemoBatchResponse
+         * @description Synthetic counterfactual comparison of RevLoop against the naive baseline.
+         */
+        DemoBatchResponse: {
+            /**
+             * Data Source
+             * @default SYNTHETIC_SIMULATION
+             * @constant
+             */
+            data_source: "SYNTHETIC_SIMULATION";
+            dataset: components["schemas"]["DatasetProvenanceModel"];
+            /** Evaluation Label */
+            evaluation_label: string;
+            /** Incremental Expected Recovered Minor */
+            incremental_expected_recovered_minor: number;
+            /** Incremental Realized Recovered Minor */
+            incremental_realized_recovered_minor: number;
+            naive_baseline_policy: components["schemas"]["PolicySimulationSummary"];
+            revloop_model_policy: components["schemas"]["PolicySimulationSummary"];
+            scorer: components["schemas"]["ScorerProvenanceModel"];
+        };
+        /**
+         * DemoResetResponse
+         * @description Result of restoring the canonical deterministic demo baseline.
+         */
+        DemoResetResponse: {
+            /**
+             * Data Source
+             * @default SYNTHETIC_SIMULATION
+             * @constant
+             */
+            data_source: "SYNTHETIC_SIMULATION";
+            /** Organization Id */
+            organization_id: string;
+            /** Recovery Case Count */
+            recovery_case_count: number;
+            /** Reset Performed */
+            reset_performed: boolean;
+            /** Seed Version */
+            seed_version: string;
+        };
         /** FailureBreakdownRow */
         FailureBreakdownRow: {
             /** Amount Minor */
@@ -469,6 +577,30 @@ export interface components {
             scheduled_for: string | null;
             /** Status */
             status: string;
+        };
+        /**
+         * PolicySimulationSummary
+         * @description Per-policy synthetic metrics, exactly as the canonical evaluator reports.
+         */
+        PolicySimulationSummary: {
+            /** Amount At Risk Minor */
+            amount_at_risk_minor: number;
+            /** Contact Action Count */
+            contact_action_count: number;
+            /** Expected Synthetic Recovered Minor */
+            expected_synthetic_recovered_minor: number;
+            /** No Selection Count */
+            no_selection_count: number;
+            /** Number Of Cases */
+            number_of_cases: number;
+            /** Realized Recovery Rate */
+            realized_recovery_rate: string;
+            /** Realized Synthetic Recovered Minor */
+            realized_synthetic_recovered_minor: number;
+            /** Selected Intervention Count */
+            selected_intervention_count: number;
+            /** Stop Count */
+            stop_count: number;
         };
         /** RecommendationCandidate */
         RecommendationCandidate: {
@@ -628,6 +760,18 @@ export interface components {
             action_status: string;
             /** Case Status */
             case_status: string;
+        };
+        /**
+         * ScorerProvenanceModel
+         * @description Which model actually produced the probabilities behind these numbers.
+         */
+        ScorerProvenanceModel: {
+            /** Feature Schema Version */
+            feature_schema_version: string;
+            /** Model Family */
+            model_family: string;
+            /** Model Version */
+            model_version: string;
         };
         /** SelectedRecommendationResponse */
         SelectedRecommendationResponse: {
@@ -795,6 +939,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_demo_api_v1_demo_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoResetResponse"];
+                };
+            };
+        };
+    };
+    run_batch_api_v1_demo_run_batch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoBatchResponse"];
                 };
             };
         };
