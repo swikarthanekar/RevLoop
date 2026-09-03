@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 
 import { EmptyState, ErrorState } from "@/components/async-state/error-state";
@@ -18,6 +18,8 @@ import { getCaseControls } from "@/app/(app)/recovery/[caseId]/case-presentation
 import { isTerminalStatus } from "@/app/(app)/recovery/[caseId]/case-types";
 import { useCaseActions } from "@/app/(app)/recovery/[caseId]/use-case-actions";
 import { useCaseDetail } from "@/app/(app)/recovery/[caseId]/use-case-detail";
+import { AuditTimeline } from "@/app/(app)/recovery/[caseId]/audit-timeline";
+import { useCaseTimeline } from "@/app/(app)/recovery/[caseId]/use-case-timeline";
 
 interface CaseDetailClientProps {
   caseId: string;
@@ -47,10 +49,26 @@ export function CaseDetailClient({ caseId, apiClient }: CaseDetailClientProps) {
     pollExhausted,
   } = useCaseDetail(caseId, client);
 
+  const {
+    state: timelineState,
+    refresh: refreshTimeline,
+    isRefreshing: isTimelineRefreshing,
+  } = useCaseTimeline(caseId, client);
+
+  // Unchanged from Prompt 21: the mutation chain still awaits only the
+  // case-detail fetch. The timeline is deliberately NOT awaited here, so a slow
+  // or failing timeline read cannot alter mutation, conflict or polling
+  // behaviour.
   const onAuthoritativeRefetch = useCallback(
     () => refreshSilently(),
     [refreshSilently],
   );
+
+  /** User-initiated refresh covers both the case and its audit history. */
+  const handleRefreshAll = useCallback(() => {
+    void refresh();
+    void refreshTimeline();
+  }, [refresh, refreshTimeline]);
 
   const {
     mutation,
@@ -102,6 +120,24 @@ export function CaseDetailClient({ caseId, apiClient }: CaseDetailClientProps) {
     [detail, reject],
   );
 
+  // A new case version means the backend recorded new audit events, so the
+  // timeline is refetched. This watches authoritative state rather than hooking
+  // into the mutation path, which also covers transitions discovered by the
+  // WAITING_FOR_OUTCOME poll.
+  const caseVersion = detail?.case.version ?? null;
+  const lastSeenVersionRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (caseVersion === null) {
+      return;
+    }
+    const previousVersion = lastSeenVersionRef.current;
+    lastSeenVersionRef.current = caseVersion;
+    if (previousVersion !== null && previousVersion !== caseVersion) {
+      void refreshTimeline();
+    }
+  }, [caseVersion, refreshTimeline]);
+
   if (state.status === "loading") {
     return <CaseDetailSkeleton />;
   }
@@ -148,7 +184,7 @@ export function CaseDetailClient({ caseId, apiClient }: CaseDetailClientProps) {
         caseCore={caseCore}
         customer={customer}
         source={source}
-        onRefresh={refresh}
+        onRefresh={handleRefreshAll}
         isRefreshing={isRefreshing}
       />
 
@@ -180,7 +216,7 @@ export function CaseDetailClient({ caseId, apiClient }: CaseDetailClientProps) {
             onExecute={handleExecute}
             onApprove={handleApprove}
             onReject={handleReject}
-            onRefresh={refresh}
+            onRefresh={handleRefreshAll}
             isRefreshing={isRefreshing}
             pollExhausted={pollExhausted}
           />
@@ -191,6 +227,12 @@ export function CaseDetailClient({ caseId, apiClient }: CaseDetailClientProps) {
         candidates={analysis?.candidates ?? []}
         currency={caseCore.currency}
         selectedAction={analysis?.selected_action ?? null}
+      />
+
+      <AuditTimeline
+        state={timelineState}
+        onRefresh={refreshTimeline}
+        isRefreshing={isTimelineRefreshing}
       />
     </div>
   );

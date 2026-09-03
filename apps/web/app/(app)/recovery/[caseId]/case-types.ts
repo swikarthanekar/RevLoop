@@ -31,6 +31,9 @@ export type RejectRecoveryActionResponse =
   components["schemas"]["RejectRecoveryActionResponse"];
 export type CustomerActionResponse = components["schemas"]["CustomerActionResponse"];
 
+export type TimelineEntry = components["schemas"]["TimelineEntry"];
+export type TimelineResponse = components["schemas"]["TimelineResponse"];
+
 /**
  * Terminal states per STATE_MACHINE.md section 1. Used for presentation only —
  * the backend rejects mutations on terminal cases regardless of what the UI shows.

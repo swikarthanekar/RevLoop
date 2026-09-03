@@ -93,8 +93,17 @@ function readOnlyClient(detail: unknown) {
   return buildClient(() => ({ status: 200, body: detail }));
 }
 
+/**
+ * Case-detail reads only.
+ *
+ * The page also embeds the Prompt 22 audit timeline, which issues its own GET
+ * to `/timeline` through the same client. Excluding it keeps these assertions
+ * measuring case-detail fetching and polling specifically.
+ */
 const getCalls = (calls: CallRecord[]) =>
-  calls.filter((call) => call.method === "GET");
+  calls.filter(
+    (call) => call.method === "GET" && !call.url.includes("/timeline"),
+  );
 const postCalls = (calls: CallRecord[], fragment: string) =>
   calls.filter((call) => call.method === "POST" && call.url.includes(fragment));
 
