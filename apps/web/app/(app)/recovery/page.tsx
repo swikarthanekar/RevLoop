@@ -1,18 +1,13 @@
-import { EmptyState } from "@/components/async-state/error-state";
+import type { Metadata } from "next";
+
+import { RecoveryClient } from "@/app/(app)/recovery/recovery-client";
+
+export const metadata: Metadata = {
+  title: "Recovery Opportunities | RevLoop",
+  description:
+    "Prioritized recoverable revenue cases for the current RevLoop workspace.",
+};
 
 export default function RecoveryPage() {
-  return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Recovery Opportunities</h1>
-        <p className="mt-1 text-sm text-neutral-600">
-          Prioritized recoverable revenue cases will appear here in a later milestone.
-        </p>
-      </div>
-      <EmptyState
-        title="Recovery table not implemented yet"
-        description="No synthetic case counts, probabilities, or amounts are displayed in this placeholder."
-      />
-    </div>
-  );
+  return <RecoveryClient />;
 }
