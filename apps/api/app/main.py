@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.router import api_v1_router, health_router
+from app.api.router import api_v1_router, build_demo_router, health_router
 from app.core.config import get_settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
@@ -25,6 +25,11 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(api_v1_router)
+
+    # Demo routes are registered only under DEMO_MODE, so they do not exist as
+    # application routes otherwise and resolve to 404.
+    if settings.demo_mode:
+        app.include_router(build_demo_router())
 
     return app
 

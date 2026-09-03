@@ -496,13 +496,61 @@ These routes exist only when `DEMO_MODE=true`, require `ADMIN`, and must never b
 Resets deterministic demo records to seed state.
 
 ### `POST /api/v1/demo/run-batch`
-Runs synthetic evaluation policy over the seeded synthetic batch.
+Runs the synthetic evaluation policy over the seeded synthetic batch.
 
-Response includes explicit:
+The batch is the canonical offline counterfactual comparison defined in `AI_ML_DESIGN.md`: the seeded synthetic evaluation cohort (`synthetic_recovery_v1`, canonical seed, `test` split) is scored by the frozen selected model, RevLoop's production policy selection is compared against the naive baseline, and both are graded against the canonical synthetic ground truth. It evaluates the ML dataset, not the seeded UI demo records, and it reads no business tables and writes nothing.
+
+Metric names deliberately match the canonical synthetic-evaluation vocabulary so simulated figures cannot be read as real recovered revenue.
+
+The example below illustrates response shape and field types only. Numeric metric values are examples, not frozen benchmark guarantees; exact measured results belong in tests and evaluation reports, not in this contract.
+
+`dataset.case_count` and `number_of_cases` report the number of cases evaluated in that run. The current implementation uses a deterministic subset of the canonical `test` split for latency; that subset size is an implementation choice, not a permanent API guarantee.
 
 ```json
-{"data_source": "SYNTHETIC_SIMULATION"}
+{
+  "data_source": "SYNTHETIC_SIMULATION",
+  "evaluation_label": "SYNTHETIC POLICY SIMULATION",
+  "scorer": {
+    "model_version": "lr-v1.0.0",
+    "model_family": "logistic_regression",
+    "feature_schema_version": "recovery_features_v1"
+  },
+  "dataset": {
+    "dataset_version": "synthetic_recovery_v1",
+    "seed": 20260901,
+    "split": "test",
+    "case_count": 250
+  },
+  "revloop_model_policy": {
+    "number_of_cases": 250,
+    "amount_at_risk_minor": 100000000,
+    "expected_synthetic_recovered_minor": 45000000,
+    "realized_synthetic_recovered_minor": 42000000,
+    "realized_recovery_rate": "0.2800",
+    "selected_intervention_count": 250,
+    "contact_action_count": 0,
+    "stop_count": 0,
+    "no_selection_count": 0
+  },
+  "naive_baseline_policy": {
+    "number_of_cases": 250,
+    "amount_at_risk_minor": 100000000,
+    "expected_synthetic_recovered_minor": 30000000,
+    "realized_synthetic_recovered_minor": 28000000,
+    "realized_recovery_rate": "0.2200",
+    "selected_intervention_count": 221,
+    "contact_action_count": 0,
+    "stop_count": 29,
+    "no_selection_count": 0
+  },
+  "incremental_expected_recovered_minor": 15000000,
+  "incremental_realized_recovered_minor": 14000000
+}
 ```
+
+`scorer` names the model that actually produced the probabilities. If the trusted selected model cannot be loaded or cannot score, the batch fails closed with `503 CANONICAL_EVALUATION_UNAVAILABLE`; it never reports heuristic-fallback numbers under the selected model's identity.
+
+Money is integer minor units. `realized_recovery_rate` is recovered cases divided by cases evaluated. Incremental values are RevLoop minus baseline.
 
 Do not create a real Razorpay Payment Link for every synthetic record.
 

@@ -45,7 +45,7 @@ def test_api_v1_router_is_available() -> None:
 
 def test_registered_api_v1_routes_after_cleanup() -> None:
     api_v1_paths = sorted(path for path in app.openapi()["paths"] if path.startswith("/api/v1"))
-    assert api_v1_paths == [
+    expected = [
         "/api/v1/",
         "/api/v1/dashboard/summary",
         "/api/v1/recovery-actions/{action_id}/approve",
@@ -57,3 +57,7 @@ def test_registered_api_v1_routes_after_cleanup() -> None:
         "/api/v1/recovery-cases/{case_id}/timeline",
         "/api/v1/webhooks/razorpay",
     ]
+    # Demo routes are registered only under DEMO_MODE.
+    if get_settings().demo_mode:
+        expected += ["/api/v1/demo/reset", "/api/v1/demo/run-batch"]
+    assert api_v1_paths == sorted(expected)
