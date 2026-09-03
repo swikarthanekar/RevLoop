@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiClient, createDefaultApiClient } from "@/lib/api/api-client";
 import { ApiError, genericApiError } from "@/lib/api/api-error";
-import { NullAccessTokenProvider } from "@/lib/auth/token-provider";
+import { createAccessTokenProvider } from "@/lib/auth/token-provider";
 import type { RecoveryCaseListResponse } from "@/app/(app)/recovery/recovery-types";
 
 export type RecoveryCasesState =
@@ -38,7 +38,7 @@ export function useRecoveryCases(
   injectedClient?: ApiClient,
 ): UseRecoveryCasesResult {
   const client = useMemo(
-    () => injectedClient ?? createDefaultApiClient(new NullAccessTokenProvider()),
+    () => injectedClient ?? createDefaultApiClient(createAccessTokenProvider()),
     [injectedClient],
   );
 

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiClient, createDefaultApiClient } from "@/lib/api/api-client";
 import { ApiError, genericApiError } from "@/lib/api/api-error";
-import { NullAccessTokenProvider } from "@/lib/auth/token-provider";
+import { createAccessTokenProvider } from "@/lib/auth/token-provider";
 import type {
   DashboardData,
   DashboardSummary,
@@ -47,7 +47,7 @@ export function useDashboardData(
   injectedClient?: ApiClient,
 ): UseDashboardDataResult {
   const client = useMemo(
-    () => injectedClient ?? createDefaultApiClient(new NullAccessTokenProvider()),
+    () => injectedClient ?? createDefaultApiClient(createAccessTokenProvider()),
     [injectedClient],
   );
 

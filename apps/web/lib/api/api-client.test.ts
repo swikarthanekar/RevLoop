@@ -218,3 +218,38 @@ describe("ApiClient", () => {
     consoleSpy.mockRestore();
   });
 });
+
+describe("default fetch binding", () => {
+  it("calls the global fetch with a browser-legal receiver", async () => {
+    // Browsers throw "Illegal invocation" when window.fetch is called with a
+    // `this` that is not the window, which previously made every request fail
+    // before it was dispatched.
+    const original = globalThis.fetch;
+    const seenThis: unknown[] = [];
+    const spy = vi.fn(function (this: unknown): Promise<Response> {
+      seenThis.push(this);
+      if (this !== undefined && this !== globalThis) {
+        throw new TypeError("Illegal invocation");
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        headers: new Headers({ "content-type": "application/json" }),
+        text: async () => JSON.stringify({ status: "ok" }),
+      } as Response);
+    });
+    globalThis.fetch = spy as unknown as typeof fetch;
+
+    try {
+      const client = new ApiClient({
+        baseUrl: "http://localhost:8000",
+        tokenProvider: new StaticTokenProvider(null),
+      });
+
+      await expect(client.get("/health")).resolves.toEqual({ status: "ok" });
+      expect(seenThis.every((value) => value === undefined || value === globalThis)).toBe(true);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+});

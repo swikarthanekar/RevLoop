@@ -8,6 +8,8 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
+    // Playwright owns e2e/*.spec.ts; Vitest must not collect them.
+    exclude: ["node_modules/**", "dist/**", ".next/**", "e2e/**"],
   },
   resolve: {
     alias: {

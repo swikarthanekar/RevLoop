@@ -11,6 +11,9 @@ AppEnvironment = Literal["development", "test", "production"]
 
 DEFAULT_DATABASE_URL = "postgresql+psycopg://user:password@localhost:5432/revloop"
 
+#: Canonical Razorpay API host. Production is pinned to this value.
+RAZORPAY_DEFAULT_API_BASE_URL = "https://api.razorpay.com"
+
 
 def normalize_database_url(url: str) -> str:
     if url.startswith("postgresql+psycopg://"):
@@ -44,6 +47,10 @@ class Settings(BaseSettings):
     razorpay_key_id: SecretStr = Field(default=SecretStr("dev-razorpay-key-id"))
     razorpay_key_secret: SecretStr = Field(default=SecretStr("dev-razorpay-key-secret"))
     razorpay_webhook_secret: SecretStr = Field(default=SecretStr("dev-razorpay-webhook-secret"))
+
+    # Overridable only outside production, so automated tests can point the real
+    # client at a local stub. Production is pinned to the canonical host below.
+    razorpay_api_base_url: str = RAZORPAY_DEFAULT_API_BASE_URL
 
     llm_provider: str = "gemini"
     gemini_api_key: SecretStr | None = Field(default=None)
@@ -87,6 +94,11 @@ class Settings(BaseSettings):
         if missing:
             raise ValueError(
                 f"Production environment requires real values for: {', '.join(missing)}"
+            )
+        if self.razorpay_api_base_url.rstrip("/") != RAZORPAY_DEFAULT_API_BASE_URL:
+            raise ValueError(
+                "Production environment must use the canonical Razorpay API base URL "
+                f"({RAZORPAY_DEFAULT_API_BASE_URL}); RAZORPAY_API_BASE_URL cannot be overridden."
             )
         return self
 

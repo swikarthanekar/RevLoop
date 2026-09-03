@@ -11,7 +11,7 @@ from urllib.parse import quote
 
 import httpx
 
-from app.core.config import Settings
+from app.core.config import RAZORPAY_DEFAULT_API_BASE_URL, Settings
 from app.integrations.razorpay.errors import (
     RazorpayAuthenticationError,
     RazorpayConfigurationError,
@@ -24,7 +24,7 @@ from app.integrations.razorpay.errors import (
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_BASE_URL = "https://api.razorpay.com"
+DEFAULT_BASE_URL = RAZORPAY_DEFAULT_API_BASE_URL
 CONNECT_TIMEOUT_SECONDS = 3.0
 READ_TIMEOUT_SECONDS = 8.0
 MAX_READ_ATTEMPTS = 3
@@ -109,6 +109,7 @@ class RazorpayClient:
         return cls(
             key_id=key_id,
             key_secret=key_secret,
+            base_url=settings.razorpay_api_base_url,
             transport=transport,
             retry_sleep=retry_sleep,
         )

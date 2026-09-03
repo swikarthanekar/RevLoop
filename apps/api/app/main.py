@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_v1_router, build_demo_router, health_router
 from app.core.config import get_settings
@@ -21,6 +22,19 @@ def create_app() -> FastAPI:
     app = FastAPI(title="RevLoop API", version=settings.api_version, lifespan=lifespan)
 
     app.add_middleware(RequestIdMiddleware)
+
+    # The frontend is a separate origin calling this API directly from the
+    # browser, so it needs an explicit CORS grant. Only the configured public
+    # app origin is allowed, and credentials stay off because authentication
+    # travels as a Bearer header rather than a cookie.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[settings.public_app_base_url.rstrip("/")],
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
+
     register_exception_handlers(app)
 
     app.include_router(health_router)

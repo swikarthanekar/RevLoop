@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiClient, createDefaultApiClient } from "@/lib/api/api-client";
 import { ApiError, genericApiError } from "@/lib/api/api-error";
-import { NullAccessTokenProvider } from "@/lib/auth/token-provider";
+import { createAccessTokenProvider } from "@/lib/auth/token-provider";
 import type { CaseDetail } from "@/app/(app)/recovery/[caseId]/case-types";
 
 /** Bounded polling policy for WAITING_FOR_OUTCOME (4s, within the 3–5s band). */
@@ -54,7 +54,7 @@ export function useCaseDetail(
   injectedClient?: ApiClient,
 ): UseCaseDetailResult {
   const client = useMemo(
-    () => injectedClient ?? createDefaultApiClient(new NullAccessTokenProvider()),
+    () => injectedClient ?? createDefaultApiClient(createAccessTokenProvider()),
     [injectedClient],
   );
 

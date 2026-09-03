@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { ApiClient } from "@/lib/api/api-client";
-import { NullAccessTokenProvider } from "@/lib/auth/token-provider";
+import { createAccessTokenProvider } from "@/lib/auth/token-provider";
 import { ENVIRONMENT_BADGE_TEXT, getApiBaseUrl } from "@/lib/config/public";
 
 type HealthState = "unknown" | "connected" | "unavailable";
@@ -27,7 +27,7 @@ function ApiHealthIndicator() {
     let cancelled = false;
     const client = new ApiClient({
       baseUrl: getApiBaseUrl(),
-      tokenProvider: new NullAccessTokenProvider(),
+      tokenProvider: createAccessTokenProvider(),
     });
 
     client

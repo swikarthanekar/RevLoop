@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { EmptyState, ErrorState } from "@/components/async-state/error-state";
 import { ApiClient, createDefaultApiClient } from "@/lib/api/api-client";
-import { NullAccessTokenProvider } from "@/lib/auth/token-provider";
+import { createAccessTokenProvider } from "@/lib/auth/token-provider";
 import { CaseActionPanel } from "@/app/(app)/recovery/[caseId]/case-action-panel";
 import { CaseCandidatesTable } from "@/app/(app)/recovery/[caseId]/case-candidates-table";
 import { CaseDecisionCard } from "@/app/(app)/recovery/[caseId]/case-decision-card";
@@ -37,7 +37,7 @@ interface CaseDetailClientProps {
  */
 export function CaseDetailClient({ caseId, apiClient }: CaseDetailClientProps) {
   const client = useMemo(
-    () => apiClient ?? createDefaultApiClient(new NullAccessTokenProvider()),
+    () => apiClient ?? createDefaultApiClient(createAccessTokenProvider()),
     [apiClient],
   );
 

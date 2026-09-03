@@ -48,7 +48,11 @@ export class ApiClient {
     this.baseUrl = options.baseUrl;
     this.tokenProvider = options.tokenProvider;
     this.timeoutMs = options.timeoutMs ?? API_REQUEST_TIMEOUT_MS;
-    this.fetchImpl = options.fetchImpl ?? fetch;
+    // `fetch` must keep its original receiver: browsers reject `window.fetch`
+    // called with any other `this` ("Illegal invocation"), which would fail the
+    // request before it is ever dispatched.
+    this.fetchImpl =
+      options.fetchImpl ?? ((input, init) => globalThis.fetch(input, init));
   }
 
   async request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
