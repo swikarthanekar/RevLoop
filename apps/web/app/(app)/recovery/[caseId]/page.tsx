@@ -1,27 +1,21 @@
-import { EmptyState } from "@/components/async-state/error-state";
+import type { Metadata } from "next";
 
-interface RecoveryCasePlaceholderPageProps {
+import { CaseDetailClient } from "@/app/(app)/recovery/[caseId]/case-detail-client";
+
+export const metadata: Metadata = {
+  title: "Recovery Case | RevLoop",
+  description:
+    "Recovery case detail: failure evidence, recommendation, candidate actions and outcome.",
+};
+
+interface RecoveryCaseDetailPageProps {
   params: Promise<{ caseId: string }>;
 }
 
-export default async function RecoveryCasePlaceholderPage({
+export default async function RecoveryCaseDetailPage({
   params,
-}: RecoveryCasePlaceholderPageProps) {
+}: RecoveryCaseDetailPageProps) {
   const { caseId } = await params;
 
-  return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Recovery Case Detail</h1>
-        <p className="mt-1 text-sm text-neutral-600">
-          Case detail for <span className="font-mono text-neutral-800">{caseId}</span> will be
-          implemented in a later milestone.
-        </p>
-      </div>
-      <EmptyState
-        title="Case detail not implemented yet"
-        description="This route establishes navigation shape only. No recommendations, actions, or timeline data are shown."
-      />
-    </div>
-  );
+  return <CaseDetailClient caseId={caseId} />;
 }
