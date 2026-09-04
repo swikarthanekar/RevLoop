@@ -137,11 +137,17 @@ def _should_apply_subscription_state(
     new_event_at: datetime | None,
     event_type: str,
 ) -> bool:
+    # Ordering is checked first, even for `subscription.charged`: Razorpay does
+    # not guarantee webhook delivery order, so a charged event for an older
+    # cycle can arrive after a newer halted/pending event. Treating charged as
+    # unconditionally authoritative would revert the subscription status and
+    # then cause the *next genuinely newer* event to be rejected as stale
+    # (see the current_status == SUBSCRIPTION_CHARGED rule below).
+    if current_event_at and new_event_at and new_event_at < current_event_at:
+        return False
     if event_type == "subscription.charged":
         return True
     if current_status == SUBSCRIPTION_CHARGED and event_type == "subscription.pending":
-        return False
-    if current_event_at and new_event_at and new_event_at < current_event_at:
         return False
     return True
 
@@ -793,12 +799,21 @@ class ProviderEventService:
             raise MalformedWebhookPayloadError("payment.failed missing payment entity.")
 
         event_at = require_provider_event_timestamp(envelope)
-        transaction, applied = self._upsert_transaction_from_payment(
-            organization_id=organization_id,
-            payment=payment,
-            event_at=event_at,
-            force_status=PAYMENT_FAILED,
-        )
+        try:
+            transaction, applied = self._upsert_transaction_from_payment(
+                organization_id=organization_id,
+                payment=payment,
+                event_at=event_at,
+                force_status=PAYMENT_FAILED,
+            )
+        except WebhookCorrelationError:
+            self._webhook_repo.mark_ignored(
+                self._session,
+                event=webhook_event,
+                processed_at=_utcnow(),
+                reason=INSUFFICIENT_FINANCIAL_EVIDENCE,
+            )
+            return
         if not applied or transaction.status == PAYMENT_TERMINAL_SUCCESS:
             self._webhook_repo.mark_ignored(
                 self._session,
@@ -827,12 +842,21 @@ class ProviderEventService:
             raise MalformedWebhookPayloadError("payment.captured missing payment entity.")
 
         event_at = require_provider_event_timestamp(envelope)
-        transaction, _applied = self._upsert_transaction_from_payment(
-            organization_id=organization_id,
-            payment=payment,
-            event_at=event_at,
-            force_status=PAYMENT_TERMINAL_SUCCESS,
-        )
+        try:
+            transaction, _applied = self._upsert_transaction_from_payment(
+                organization_id=organization_id,
+                payment=payment,
+                event_at=event_at,
+                force_status=PAYMENT_TERMINAL_SUCCESS,
+            )
+        except WebhookCorrelationError:
+            self._webhook_repo.mark_ignored(
+                self._session,
+                event=webhook_event,
+                processed_at=_utcnow(),
+                reason=INSUFFICIENT_FINANCIAL_EVIDENCE,
+            )
+            return
 
         case = self._find_case_for_transaction(
             organization_id=organization_id,

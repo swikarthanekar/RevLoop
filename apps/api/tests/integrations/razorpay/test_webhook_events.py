@@ -17,7 +17,11 @@ from app.models.recovery_outcome import RecoveryOutcome
 from app.models.transaction import Transaction
 from app.models.webhook_event import WebhookEvent
 from app.repositories.webhook_events import PROVIDER_RAZORPAY
-from app.services.provider_events import payment_failed_source_event_key
+from app.services.provider_events import (
+    INSUFFICIENT_FINANCIAL_EVIDENCE,
+    payment_failed_source_event_key,
+    subscription_pending_source_event_key,
+)
 from tests.integrations.razorpay.conftest import WEBHOOK_PATH, post_webhook
 from tests.integrations.razorpay.helpers import (
     build_webhook_payload,
@@ -370,6 +374,196 @@ def test_subscription_charged_before_old_pending(
         select(WebhookEvent).where(WebhookEvent.provider_event_id == "evt_sub_pending_old")
     ).scalar_one()
     assert stale.processing_status == WebhookProcessingStatus.IGNORED.value
+
+
+def test_stale_subscription_charged_does_not_revert_newer_halted_status(
+    webhook_client,
+    webhook_session_factory,
+    webhook_db_session,
+) -> None:
+    """A `subscription.charged` event delivered out of order, with an
+    envelope timestamp older than an already-applied `subscription.halted`,
+    must not revert the subscription back to active. If it did, the *next*
+    genuinely newer `subscription.pending` for the real new failure would be
+    rejected as stale (current_status == CHARGED), and no recovery case would
+    ever be created for the real failure."""
+    from app.models.subscription import Subscription
+
+    sub_id = "sub_stale_charged_001"
+    old_cycle_start = 1_700_000_000
+    old_cycle_end = 1_700_000_900
+    new_cycle_start = 1_700_002_000
+    new_cycle_end = 1_700_002_900
+
+    setup = webhook_session_factory()
+    try:
+        customer = create_customer(setup, organization_id=DEMO_ORGANIZATION_ID)
+        setup.add(
+            Subscription(
+                organization_id=DEMO_ORGANIZATION_ID,
+                customer_id=customer.id,
+                provider=PROVIDER_RAZORPAY,
+                provider_subscription_id=sub_id,
+                amount_minor=99900,
+                currency="INR",
+                status="pending",
+                retry_count=0,
+                is_synthetic=False,
+            )
+        )
+        setup.commit()
+    finally:
+        setup.close()
+
+    # A genuinely newer halted event is applied first.
+    halted = subscription_entity(
+        subscription_id=sub_id,
+        status="halted",
+        current_start=old_cycle_start,
+        current_end=old_cycle_end,
+    )
+    raw_halted, _, _, halted_headers = signed_request(
+        build_webhook_payload("subscription.halted", subscription=halted, created_at=1_700_001_000),
+        event_id="evt_sub_halted_current",
+    )
+    post_webhook(webhook_client, raw_halted, halted_headers)
+
+    subscription = webhook_db_session.execute(
+        select(Subscription).where(Subscription.provider_subscription_id == sub_id)
+    ).scalar_one()
+    assert subscription.status == "halted"
+
+    # A stale `subscription.charged` event for an OLDER billing cycle arrives
+    # late (out-of-order delivery), with an envelope timestamp older than the
+    # halted event already applied.
+    stale_charged = subscription_entity(
+        subscription_id=sub_id,
+        status="active",
+        current_start=old_cycle_start,
+        current_end=old_cycle_end,
+    )
+    stale_payment = payment_entity(
+        payment_id="pay_stale_charged_001",
+        amount=99900,
+        status="captured",
+    )
+    raw_stale, _, _, stale_headers = signed_request(
+        build_webhook_payload(
+            "subscription.charged",
+            subscription=stale_charged,
+            payment=stale_payment,
+            created_at=1_700_000_500,
+        ),
+        event_id="evt_sub_stale_charged",
+    )
+    post_webhook(webhook_client, raw_stale, stale_headers)
+
+    webhook_db_session.expire_all()
+    subscription = webhook_db_session.execute(
+        select(Subscription).where(Subscription.provider_subscription_id == sub_id)
+    ).scalar_one()
+    assert subscription.status == "halted"
+
+    # A genuinely newer `subscription.pending` for the real new failure must
+    # still be accepted, not rejected as stale, and must create a new case.
+    new_pending = subscription_entity(
+        subscription_id=sub_id,
+        status="pending",
+        current_start=new_cycle_start,
+        current_end=new_cycle_end,
+    )
+    raw_pending, _, _, pending_headers = signed_request(
+        build_webhook_payload(
+            "subscription.pending", subscription=new_pending, created_at=1_700_002_000
+        ),
+        event_id="evt_sub_new_pending",
+    )
+    response = post_webhook(webhook_client, raw_pending, pending_headers)
+    assert response.status_code == 204
+
+    pending_event = webhook_db_session.execute(
+        select(WebhookEvent).where(WebhookEvent.provider_event_id == "evt_sub_new_pending")
+    ).scalar_one()
+    assert pending_event.processing_status == WebhookProcessingStatus.PROCESSED.value
+
+    key = subscription_pending_source_event_key(
+        sub_id, f"{new_cycle_start}:{new_cycle_end}"
+    )
+    new_case = webhook_db_session.execute(
+        select(RecoveryCase).where(RecoveryCase.source_event_key == key)
+    ).scalar_one_or_none()
+    assert new_case is not None
+    assert new_case.status == RecoveryCaseStatus.DETECTED.value
+
+
+def test_payment_failed_correlation_failure_persists_ignored_event(
+    webhook_client,
+    webhook_db_session,
+) -> None:
+    """An uncorrelated payment.failed webhook must not silently vanish. Before
+    the fix, the unhandled WebhookCorrelationError rolled back the whole
+    transaction -- including the dedup claim insert -- so the event was never
+    persisted and every provider retry repeated identical work with zero
+    durable trace. It must instead be recorded as IGNORED, matching how the
+    subscription handlers already treat the same error class."""
+    payment = payment_entity(
+        payment_id="pay_uncorrelated_failed_001",
+        customer_external_id="no-such-customer-xyz",
+    )
+    payload = build_webhook_payload("payment.failed", payment=payment)
+    raw_body, _, event_id, headers = signed_request(
+        payload, event_id="evt_uncorrelated_failed"
+    )
+
+    response = post_webhook(webhook_client, raw_body, headers)
+    assert response.status_code == 204
+
+    event = webhook_db_session.execute(
+        select(WebhookEvent).where(WebhookEvent.provider_event_id == event_id)
+    ).scalar_one()
+    assert event.processing_status == WebhookProcessingStatus.IGNORED.value
+    assert event.processing_error == INSUFFICIENT_FINANCIAL_EVIDENCE
+
+    count = webhook_db_session.execute(
+        select(func.count())
+        .select_from(Transaction)
+        .where(Transaction.provider_payment_id == "pay_uncorrelated_failed_001")
+    ).scalar_one()
+    assert count == 0
+
+
+def test_payment_captured_correlation_failure_persists_ignored_event(
+    webhook_client,
+    webhook_db_session,
+) -> None:
+    """Same durability guarantee as above, for payment.captured against a
+    payment RevLoop has never seen before (so a new Transaction would need to
+    be created, which requires customer correlation)."""
+    payment = payment_entity(
+        payment_id="pay_uncorrelated_captured_001",
+        status="captured",
+        customer_external_id="no-such-customer-xyz",
+    )
+    payload = build_webhook_payload("payment.captured", payment=payment)
+    raw_body, _, event_id, headers = signed_request(
+        payload, event_id="evt_uncorrelated_captured"
+    )
+
+    response = post_webhook(webhook_client, raw_body, headers)
+    assert response.status_code == 204
+
+    event = webhook_db_session.execute(
+        select(WebhookEvent).where(WebhookEvent.provider_event_id == event_id)
+    ).scalar_one()
+    assert event.processing_status == WebhookProcessingStatus.IGNORED.value
+    assert event.processing_error == INSUFFICIENT_FINANCIAL_EVIDENCE
+
+    count = webhook_db_session.execute(
+        select(func.count())
+        .select_from(Transaction)
+        .where(Transaction.provider_payment_id == "pay_uncorrelated_captured_001")
+    ).scalar_one()
+    assert count == 0
 
 
 def test_unknown_event_persisted_and_ignored(webhook_client, webhook_db_session) -> None:
