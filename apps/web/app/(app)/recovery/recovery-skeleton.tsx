@@ -13,7 +13,7 @@ const COLUMN_HEADERS = [
 ];
 
 const HEADER_CELL =
-  "whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-neutral-500";
+  "whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-muted";
 
 interface RecoveryTableSkeletonProps {
   rows?: number;
@@ -30,7 +30,7 @@ export function RecoveryTableSkeleton({ rows = 8 }: RecoveryTableSkeletonProps) 
       <table className="w-full min-w-[72rem] border-collapse text-sm">
         <caption className="sr-only">Loading recovery opportunities</caption>
         <thead>
-          <tr className="border-b border-neutral-200 text-left">
+          <tr className="border-b border-line text-left">
             {COLUMN_HEADERS.map((header) => (
               <th key={header} scope="col" className={HEADER_CELL}>
                 {header}
@@ -43,7 +43,7 @@ export function RecoveryTableSkeleton({ rows = 8 }: RecoveryTableSkeletonProps) 
         </thead>
         <tbody>
           {Array.from({ length: rows }, (_value, rowIndex) => (
-            <tr key={rowIndex} className="border-b border-neutral-100">
+            <tr key={rowIndex} className="border-b border-line">
               <td className="px-3 py-3">
                 <InlineSkeleton className="h-4 w-40" />
                 <InlineSkeleton className="mt-1.5 h-3 w-20" />

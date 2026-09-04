@@ -31,7 +31,7 @@ export function ErrorState({ error, onRetry, title }: ErrorStateProps) {
         <button
           type="button"
           onClick={onRetry}
-          className="mt-3 rounded-md border border-rose-300 bg-white px-3 py-1.5 text-xs font-medium text-rose-900 hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-400"
+          className="mt-3 rounded-md border border-rose-300 bg-surface px-3 py-1.5 text-xs font-medium text-rose-900 hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-400"
         >
           Retry
         </button>
@@ -47,8 +47,8 @@ interface EmptyStateProps {
 
 export function EmptyState({ title, description }: EmptyStateProps) {
   return (
-    <div className="rounded-lg border border-dashed border-neutral-300 bg-neutral-50 p-6 text-sm text-neutral-700">
-      <p className="font-medium text-neutral-900">{title}</p>
+    <div className="rounded-lg border border-dashed border-line bg-surface-hover p-6 text-sm text-ink">
+      <p className="font-medium text-ink">{title}</p>
       <p className="mt-1">{description}</p>
     </div>
   );

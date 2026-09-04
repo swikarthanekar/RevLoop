@@ -19,15 +19,15 @@ export function DashboardSection({
 }: DashboardSectionProps) {
   return (
     <section
-      className={`rounded-lg border border-neutral-200 bg-white p-5 ${className}`}
+      className={`rounded-lg border border-line bg-surface p-5 ${className}`}
     >
       <div className="mb-4 flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
         <div>
-          <h2 className="text-base font-semibold tracking-tight text-neutral-900">
+          <h2 className="text-base font-semibold tracking-tight text-ink">
             {title}
           </h2>
           {description ? (
-            <p className="mt-0.5 text-sm text-neutral-600">{description}</p>
+            <p className="mt-0.5 text-sm text-ink-muted">{description}</p>
           ) : null}
         </div>
         {aside ? <div className="shrink-0">{aside}</div> : null}
@@ -44,7 +44,7 @@ interface SectionEmptyNoteProps {
 /** Neutral in-section note used when a specific metric set has no rows. */
 export function SectionEmptyNote({ children }: SectionEmptyNoteProps) {
   return (
-    <p className="rounded-md border border-dashed border-neutral-300 bg-neutral-50 px-4 py-6 text-center text-sm text-neutral-600">
+    <p className="rounded-md border border-dashed border-line bg-surface-hover px-4 py-6 text-center text-sm text-ink-muted">
       {children}
     </p>
   );

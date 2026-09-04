@@ -20,14 +20,14 @@ export function DashboardHeader({
   return (
     <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+        <h1 className="text-2xl font-semibold tracking-tight text-ink">
           Revenue Recovery Overview
         </h1>
         {sourceLabel === null ? (
           <InlineSkeleton className="mt-2 h-4 w-56" />
         ) : (
-          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-neutral-600">
-            <span className="rounded border border-neutral-300 bg-neutral-50 px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-neutral-700">
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
+            <span className="rounded border border-line bg-surface-hover px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-ink">
               Data source
             </span>
             {sourceLabel}
@@ -40,7 +40,7 @@ export function DashboardHeader({
         onClick={onRefresh}
         disabled={isRefreshing}
         aria-busy={isRefreshing}
-        className="inline-flex items-center rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex items-center rounded-md border border-line bg-surface px-3 py-2 text-sm font-medium text-ink hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isRefreshing ? "Refreshing…" : "Refresh"}
       </button>

@@ -23,9 +23,9 @@ interface RecoveryFiltersProps {
   failureCategoryOptions: string[];
 }
 
-const FIELD_LABEL = "block text-xs font-medium text-neutral-600";
+const FIELD_LABEL = "block text-xs font-medium text-ink-muted";
 const FIELD_CONTROL =
-  "mt-1 w-full rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm text-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500";
+  "mt-1 w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-sm text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500";
 
 export function RecoveryFilters({
   filters,
@@ -48,7 +48,7 @@ export function RecoveryFilters({
   return (
     <section
       aria-label="Recovery case filters"
-      className="rounded-lg border border-neutral-200 bg-white p-4"
+      className="rounded-lg border border-line bg-surface p-4"
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div>
@@ -158,8 +158,8 @@ export function RecoveryFilters({
                   onClick={() => toggleStatus(status)}
                   className={`rounded-full border px-2.5 py-1 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 ${
                     active
-                      ? "border-neutral-800 bg-neutral-800 text-white"
-                      : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                      ? "border-accent bg-accent text-on-accent"
+                      : "border-line bg-surface text-ink hover:bg-surface-hover"
                   }`}
                 >
                   {humanizeEnumLabel(status)}
@@ -197,7 +197,7 @@ export function RecoveryFilters({
             <button
               type="button"
               onClick={onClear}
-              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500"
+              className="rounded-md border border-line bg-surface px-3 py-1.5 text-sm font-medium text-ink hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500"
             >
               Clear filters
             </button>

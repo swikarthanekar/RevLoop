@@ -34,7 +34,7 @@ export function AuditTimeline({
       onClick={onRefresh}
       disabled={isRefreshing}
       aria-busy={isRefreshing}
-      className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-50"
+      className="rounded-md border border-line bg-surface px-3 py-1.5 text-sm font-medium text-ink hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-50"
     >
       {isRefreshing ? "Refreshing…" : "Refresh timeline"}
     </button>

@@ -6,6 +6,7 @@ import { ApiClient } from "@/lib/api/api-client";
 import { createAccessTokenProvider } from "@/lib/auth/token-provider";
 import { useAuthSession } from "@/lib/auth/session";
 import { ENVIRONMENT_BADGE_TEXT, getApiBaseUrl, isSupabaseConfigured } from "@/lib/config/public";
+import { ThemeToggle } from "@/components/app-shell/theme-toggle";
 
 type HealthState = "unknown" | "connected" | "unavailable";
 
@@ -59,7 +60,7 @@ function ApiHealthIndicator() {
 
   return (
     <span
-      className="rounded-md border border-neutral-300 bg-neutral-50 px-2 py-1 text-xs text-neutral-700"
+      className="rounded-md border border-line bg-surface-hover px-2 py-1 text-xs text-ink"
       aria-live="polite"
     >
       {label}
@@ -73,7 +74,7 @@ function UserMenu() {
 
   if (!isSupabaseConfigured()) {
     return (
-      <div className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-700">
+      <div className="rounded-md border border-line bg-surface px-3 py-1.5 text-xs text-ink">
         Demo operator
       </div>
     );
@@ -93,7 +94,7 @@ function UserMenu() {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-700">
+      <span className="rounded-md border border-line bg-surface px-3 py-1.5 text-xs text-ink">
         {role ? roleLabel(role) : "Signed in"}
       </span>
       <button
@@ -101,7 +102,7 @@ function UserMenu() {
         onClick={() => void handleSignOut()}
         disabled={signingOut}
         aria-busy={signingOut}
-        className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {signingOut ? "Signing out…" : "Sign out"}
       </button>
@@ -115,13 +116,14 @@ function roleLabel(role: string): string {
 
 export function TopBar() {
   return (
-    <header className="flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-3">
+    <header className="flex items-center justify-between border-b border-line bg-surface px-4 py-3">
       <div className="flex items-center gap-3">
-        <span className="text-sm font-medium text-neutral-800">Merchant demo workspace</span>
+        <span className="text-sm font-medium text-ink">Merchant demo workspace</span>
         <EnvironmentBadge />
       </div>
       <div className="flex items-center gap-3">
         <ApiHealthIndicator />
+        <ThemeToggle />
         <UserMenu />
       </div>
     </header>

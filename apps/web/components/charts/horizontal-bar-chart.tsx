@@ -38,17 +38,17 @@ export function HorizontalBarChart({
           <li key={datum.id} className="flex flex-col gap-1.5">
             <div className="flex items-baseline justify-between gap-4">
               <span
-                className="truncate text-sm font-medium text-neutral-800"
+                className="truncate text-sm font-medium text-ink"
                 title={datum.label}
               >
                 {truncateLabel(datum.label, 40)}
               </span>
-              <span className="shrink-0 text-sm font-semibold tabular-nums text-neutral-900">
+              <span className="shrink-0 text-sm font-semibold tabular-nums text-ink">
                 {datum.valueLabel}
               </span>
             </div>
             <div
-              className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-100"
+              className="h-2.5 w-full overflow-hidden rounded-full bg-surface-active"
               role="img"
               aria-label={`${datum.label}: ${datum.valueLabel}${
                 datum.detail ? `, ${datum.detail}` : ""
@@ -63,7 +63,7 @@ export function HorizontalBarChart({
               />
             </div>
             {datum.detail ? (
-              <span className="text-xs text-neutral-600">{datum.detail}</span>
+              <span className="text-xs text-ink-muted">{datum.detail}</span>
             ) : null}
           </li>
         );

@@ -12,7 +12,7 @@ export function SegmentBadge({ segment }: SegmentBadgeProps) {
   const isHighValue = segment.trim().toUpperCase() === "HIGH_VALUE";
   const tone = isHighValue
     ? "border-violet-200 bg-violet-50 text-violet-800"
-    : "border-neutral-200 bg-neutral-50 text-neutral-700";
+    : "border-line bg-surface-hover text-ink";
 
   return (
     <span
@@ -34,7 +34,7 @@ interface ConfidenceMeterProps {
  */
 export function ConfidenceMeter({ confidence }: ConfidenceMeterProps) {
   if (confidence === null || !Number.isFinite(confidence)) {
-    return <span className="text-neutral-500">—</span>;
+    return <span className="text-ink-muted">—</span>;
   }
 
   const percent = Math.min(100, Math.max(0, confidence * 100));
@@ -42,7 +42,7 @@ export function ConfidenceMeter({ confidence }: ConfidenceMeterProps) {
   return (
     <span className="flex items-center gap-2">
       <span
-        className="h-1.5 w-12 shrink-0 overflow-hidden rounded-full bg-neutral-200"
+        className="h-1.5 w-12 shrink-0 overflow-hidden rounded-full bg-line"
         aria-hidden="true"
       >
         <span
@@ -50,7 +50,7 @@ export function ConfidenceMeter({ confidence }: ConfidenceMeterProps) {
           style={{ width: `${percent}%` }}
         />
       </span>
-      <span className="tabular-nums text-neutral-800">
+      <span className="tabular-nums text-ink">
         {formatRate(confidence, 0)}
       </span>
     </span>

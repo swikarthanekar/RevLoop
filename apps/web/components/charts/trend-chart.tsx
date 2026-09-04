@@ -182,7 +182,7 @@ export function TrendChart({
         {series.map((line) => (
           <span
             key={line.id}
-            className="flex items-center gap-2 text-xs font-medium text-neutral-700"
+            className="flex items-center gap-2 text-xs font-medium text-ink"
           >
             <svg width={22} height={8} aria-hidden="true" className="shrink-0">
               <line

@@ -42,7 +42,7 @@ export function CaseDecisionCard({
         title="AI recovery decision"
         headingId="case-decision-heading"
       >
-        <p className="text-sm text-neutral-600">
+        <p className="text-sm text-ink-muted">
           No analysis has been published for this case yet.
         </p>
       </CaseSection>
@@ -54,10 +54,10 @@ export function CaseDecisionCard({
 
   return (
     <CaseSection title="AI recovery decision" headingId="case-decision-heading">
-      <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+      <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
         Recommended action
       </p>
-      <p className="mt-1 text-lg font-semibold text-neutral-900">
+      <p className="mt-1 text-lg font-semibold text-ink">
         {humanizeEnumLabel(analysis.selected_action)}
       </p>
 
@@ -85,18 +85,18 @@ export function CaseDecisionCard({
         </DefinitionRow>
       </dl>
 
-      <p className="mt-2 text-[11px] text-neutral-500">
+      <p className="mt-2 text-[11px] text-ink-muted">
         Probability is a model estimate, not a guarantee.
       </p>
 
       <div className="mt-4">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-ink-muted">
           Why this action
         </h3>
-        <p className="mt-1 text-sm text-neutral-800">{explanation.summary}</p>
+        <p className="mt-1 text-sm text-ink">{explanation.summary}</p>
 
         {explanation.evidence.length > 0 ? (
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-neutral-700">
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink">
             {explanation.evidence.map((item) => (
               <li key={item}>{item}</li>
             ))}
@@ -105,10 +105,10 @@ export function CaseDecisionCard({
 
         {explanation.safety.length > 0 ? (
           <div className="mt-3">
-            <h4 className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+            <h4 className="text-xs font-medium uppercase tracking-wide text-ink-muted">
               Safety checks
             </h4>
-            <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-neutral-700">
+            <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-ink">
               {explanation.safety.map((item) => (
                 <li key={item}>{item}</li>
               ))}
@@ -119,20 +119,20 @@ export function CaseDecisionCard({
 
       {factors.length > 0 ? (
         <div className="mt-4">
-          <h3 className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+          <h3 className="text-xs font-medium uppercase tracking-wide text-ink-muted">
             Top evidence factors
           </h3>
           <ul className="mt-1.5 space-y-1">
             {factors.map((factor) => (
               <li
                 key={`${factor.code}-${factor.source}`}
-                className="flex flex-wrap items-center gap-2 text-sm text-neutral-800"
+                className="flex flex-wrap items-center gap-2 text-sm text-ink"
               >
-                <span className="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 text-[11px] font-medium">
+                <span className="rounded border border-line bg-surface-hover px-1.5 py-0.5 text-[11px] font-medium">
                   {IMPACT_LABEL[factor.impact] ?? humanizeEnumLabel(factor.impact)}
                 </span>
                 <span>{humanizeEnumLabel(factor.code)}</span>
-                <span className="text-xs text-neutral-500">
+                <span className="text-xs text-ink-muted">
                   via {humanizeEnumLabel(factor.source)}
                 </span>
               </li>
@@ -141,7 +141,7 @@ export function CaseDecisionCard({
         </div>
       ) : null}
 
-      <p className="mt-4 border-t border-neutral-100 pt-2 text-[11px] text-neutral-500">
+      <p className="mt-4 border-t border-line pt-2 text-[11px] text-ink-muted">
         Model {analysis.model_version} · Features{" "}
         {analysis.feature_schema_version}
       </p>

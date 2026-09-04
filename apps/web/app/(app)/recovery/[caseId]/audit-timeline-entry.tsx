@@ -53,16 +53,16 @@ export function AuditTimelineEntry({ entry }: AuditTimelineEntryProps) {
           >
             {category.label}
           </span>
-          <span className="font-mono text-xs font-semibold text-neutral-900">
+          <span className="font-mono text-xs font-semibold text-ink">
             {formatEventName(entry.event_type)}
           </span>
           {actorLabel ? (
-            <span className="text-xs text-neutral-500">by {actorLabel}</span>
+            <span className="text-xs text-ink-muted">by {actorLabel}</span>
           ) : null}
           <time
             dateTime={entry.occurred_at}
             title={formatExactTimestamp(entry.occurred_at)}
-            className="ml-auto text-xs tabular-nums text-neutral-500"
+            className="ml-auto text-xs tabular-nums text-ink-muted"
           >
             {formatRelativeTime(entry.occurred_at)}
           </time>
@@ -74,33 +74,33 @@ export function AuditTimelineEntry({ entry }: AuditTimelineEntryProps) {
         {entry.summary?.trim() ? (
           <p
             className={`mt-1 text-sm ${
-              isWarning ? "text-rose-900" : "text-neutral-800"
+              isWarning ? "text-rose-900" : "text-ink"
             }`}
           >
             {entry.summary}
           </p>
         ) : null}
 
-        <p className="mt-0.5 text-xs text-neutral-500">
+        <p className="mt-0.5 text-xs text-ink-muted">
           <time dateTime={entry.occurred_at}>
             {formatExactTimestamp(entry.occurred_at)}
           </time>
         </p>
 
         {evidence.length > 0 ? (
-          <details className="mt-2 rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1.5">
-            <summary className="cursor-pointer text-xs font-medium text-neutral-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500">
+          <details className="mt-2 rounded-md border border-line bg-surface-hover px-2 py-1.5">
+            <summary className="cursor-pointer text-xs font-medium text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500">
               Details ({evidence.length})
             </summary>
             <dl className="mt-1.5">
               {evidence.map((item) => (
                 <div
                   key={item.key}
-                  className="flex items-baseline justify-between gap-4 border-b border-neutral-100 py-1 last:border-b-0"
+                  className="flex items-baseline justify-between gap-4 border-b border-line py-1 last:border-b-0"
                 >
-                  <dt className="text-xs text-neutral-500">{item.label}</dt>
+                  <dt className="text-xs text-ink-muted">{item.label}</dt>
                   <dd
-                    className={`text-right text-xs text-neutral-900 ${
+                    className={`text-right text-xs text-ink ${
                       item.mono ? "break-all font-mono" : ""
                     }`}
                   >

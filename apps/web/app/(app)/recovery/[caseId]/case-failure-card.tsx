@@ -75,8 +75,8 @@ export function CaseFailureCard({ caseCore, source }: CaseFailureCardProps) {
       </dl>
 
       {evidence.length > 0 ? (
-        <details className="mt-3 rounded-md border border-neutral-200 bg-neutral-50 p-2">
-          <summary className="cursor-pointer text-xs font-medium text-neutral-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500">
+        <details className="mt-3 rounded-md border border-line bg-surface-hover p-2">
+          <summary className="cursor-pointer text-xs font-medium text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500">
             Provider evidence ({evidence.length})
           </summary>
           <dl className="mt-2">
@@ -88,7 +88,7 @@ export function CaseFailureCard({ caseCore, source }: CaseFailureCardProps) {
           </dl>
         </details>
       ) : (
-        <p className="mt-3 text-xs text-neutral-500">
+        <p className="mt-3 text-xs text-ink-muted">
           No structured provider evidence was recorded for this case.
         </p>
       )}
