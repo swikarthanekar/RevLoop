@@ -13,6 +13,7 @@ from app.domain.enums import RecoveryActionType
 
 
 class PolicyResponse(BaseModel):
+    currency: str
     auto_action_limit_minor: int
     max_recovery_attempts: int
     max_contacts_per_24h: int

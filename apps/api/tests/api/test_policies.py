@@ -19,6 +19,7 @@ def test_policy_reflects_the_seeded_merchant_policy(api_client) -> None:
 
     assert response.status_code == 200
     body = response.json()
+    assert body["currency"] == "INR"
     assert body["auto_action_limit_minor"] == AUTO_ACTION_LIMIT_MINOR
     assert sorted(body["allowed_action_types"]) == sorted(ALLOWED_ACTION_TYPES)
     assert "ESCALATE_TO_HUMAN" in body["manual_contact_approval_action_types"]

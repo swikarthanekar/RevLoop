@@ -8,6 +8,7 @@ export interface AppNavItem {
 export const PRIMARY_NAV_ITEMS: AppNavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/recovery", label: "Recovery Opportunities" },
+  { href: "/compliance", label: "Compliance Guardrails" },
   {
     href: "/dashboard#analytics",
     label: "Analytics",

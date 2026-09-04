@@ -35,6 +35,7 @@ def _to_response(policy: MerchantPolicy) -> PolicyResponse:
     config: MerchantPolicyConfig = merchant_policy_from_model(policy)
     allowed = sorted(config.allowed_action_types, key=lambda action: action.value)
     return PolicyResponse(
+        currency=policy.organization.currency,
         auto_action_limit_minor=config.auto_action_limit_minor,
         max_recovery_attempts=config.max_recovery_attempts,
         max_contacts_per_24h=config.max_contacts_per_24h,

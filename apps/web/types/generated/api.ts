@@ -641,6 +641,8 @@ export interface components {
             cooldown_action_types: components["schemas"]["RecoveryActionType"][];
             /** Cooldown Minutes */
             cooldown_minutes: number;
+            /** Currency */
+            currency: string;
             /** Manual Contact Approval Action Types */
             manual_contact_approval_action_types: components["schemas"]["RecoveryActionType"][];
             /** Max Contacts Per 24H */
