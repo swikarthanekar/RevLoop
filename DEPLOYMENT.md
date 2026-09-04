@@ -23,11 +23,26 @@ Two backends exist and are selected by `APP_ENV` (`apps/api/app/core/auth.py`):
   `DEV_AUTH_ORGANIZATION_ID`. Selected only when `APP_ENV` is `development`
   or `test`.
 - **`SupabaseAuthBackend`** — verifies a real Supabase Auth access token
-  (HS256, the project's JWT secret, audience `authenticated`), then resolves
-  `organization_id`/`role` from the `user_profiles` row matching the token's
-  `sub`. Selected for every other `APP_ENV` value (i.e. `production`). A
-  verified token with no matching `user_profiles` row is `403
-  NO_ORGANIZATION_MEMBERSHIP`, not a silent grant.
+  (audience `authenticated`), then resolves `organization_id`/`role` from the
+  `user_profiles` row matching the token's `sub`. Selected for every other
+  `APP_ENV` value (i.e. `production`). A verified token with no matching
+  `user_profiles` row is `403 NO_ORGANIZATION_MEMBERSHIP`, not a silent
+  grant.
+
+  Supabase signs user access tokens one of two ways depending on the
+  project, and the backend reads which from the token's own `alg` header
+  rather than assuming one:
+  - **Legacy shared secret (`HS256`)** — verified against
+    `SUPABASE_JWT_SECRET`.
+  - **JWT Signing Keys (`ES256`, the current default for new projects)** —
+    verified against the project's public JWKS
+    (`<SUPABASE_URL>/auth/v1/.well-known/jwks.json`), which requires
+    `SUPABASE_URL` to be set. There is no shared secret to configure for
+    this case; `SUPABASE_JWT_SECRET` is simply unused.
+
+  Check **Supabase Dashboard → Project Settings → API → JWT Keys** to see
+  which one a given project uses — decode any access token's header (the
+  part before the first `.`) if unsure, and look at `alg`.
 
 The frontend mirrors this: `apps/web/lib/auth/session.tsx` uses Supabase Auth
 (`/login`, session persistence, sign-out) whenever
@@ -227,7 +242,8 @@ mirrored into Vercel.
 | `PUBLIC_APP_BASE_URL` | `https://<project>.vercel.app` | CORS origin |
 | `DEV_AUTH_USER_ID` | `bc9f0349-0af8-557e-9557-4bdaadda544d` | canonical demo identity; only used when `APP_ENV=development` |
 | `DEV_AUTH_ORGANIZATION_ID` | `82757dbc-e0d0-5285-8f26-7a9ab9837a24` | canonical demo tenant; only used when `APP_ENV=development` |
-| `SUPABASE_JWT_SECRET` | project JWT secret | secret; verifies every Supabase-issued token (section 2.5) — must be the real value from Supabase, not a placeholder |
+| `SUPABASE_JWT_SECRET` | project JWT secret | secret; used only if the project signs tokens with the legacy shared HS256 secret (section 1) — must be the real value from Supabase, not a placeholder, if used |
+| `SUPABASE_URL` | `https://<project-ref>.supabase.co` | not secret; required if the project signs tokens asymmetrically (ES256, the current default) — see section 1 |
 | `RAZORPAY_KEY_ID` | `rzp_test_…` | secret |
 | `RAZORPAY_KEY_SECRET` | test key secret | secret |
 | `RAZORPAY_WEBHOOK_SECRET` | webhook signing secret | secret |

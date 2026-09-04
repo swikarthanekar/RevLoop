@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     dev_auth_organization_id: UUID | None = None
 
     supabase_jwt_secret: SecretStr = Field(default=SecretStr("dev-supabase-jwt-secret"))
+    #: Required only for a Supabase project using asymmetric JWT signing
+    #: keys (ES256/RS256, verified via JWKS) rather than the legacy shared
+    #: HS256 secret above -- see SupabaseAuthBackend. Not a secret: it's the
+    #: same value already public in the frontend's NEXT_PUBLIC_SUPABASE_URL.
+    supabase_url: str | None = None
 
     razorpay_key_id: SecretStr = Field(default=SecretStr("dev-razorpay-key-id"))
     razorpay_key_secret: SecretStr = Field(default=SecretStr("dev-razorpay-key-secret"))
