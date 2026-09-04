@@ -98,7 +98,7 @@ export function RecoveryClient({ apiClient }: RecoveryClientProps) {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-neutral-900">
           Recovery Opportunities
         </h1>
         <p className="mt-1 text-sm text-neutral-600">

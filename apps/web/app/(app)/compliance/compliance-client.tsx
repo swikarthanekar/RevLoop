@@ -22,7 +22,7 @@ export function ComplianceClient({ apiClient }: ComplianceClientProps) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-neutral-900">
             Compliance Guardrails
           </h1>
           <p className="mt-1 text-sm text-neutral-600">

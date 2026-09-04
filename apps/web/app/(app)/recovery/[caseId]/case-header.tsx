@@ -45,7 +45,7 @@ export function CaseHeader({
           >
             ← Recovery Opportunities
           </Link>
-          <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-neutral-900">
+          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight text-neutral-900">
             {customer.display_name}
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">

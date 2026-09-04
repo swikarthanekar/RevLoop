@@ -20,7 +20,7 @@ export function DashboardHeader({
   return (
     <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-neutral-900">
           Revenue Recovery Overview
         </h1>
         {sourceLabel === null ? (
