@@ -46,6 +46,8 @@ export function CaseOutcomeCard({ caseCore, outcome }: CaseOutcomeCardProps) {
   return (
     <CaseSection title="Outcome" headingId="case-outcome-heading">
       <div
+        role="status"
+        aria-live="polite"
         className={`rounded-md border p-4 ${
           isRecovered
             ? "border-emerald-300 bg-emerald-50"
