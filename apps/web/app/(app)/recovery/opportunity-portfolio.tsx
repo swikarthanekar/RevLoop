@@ -19,12 +19,24 @@ const PALETTE = [
   "#38bdf8",
 ];
 
-function colorForCategory(category: string): string {
+function hashString(value: string): number {
   let hash = 0;
-  for (let index = 0; index < category.length; index += 1) {
-    hash = (hash * 31 + category.charCodeAt(index)) >>> 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
   }
-  return PALETTE[hash % PALETTE.length];
+  return hash;
+}
+
+function colorForCategory(category: string): string {
+  return PALETTE[hashString(category) % PALETTE.length];
+}
+
+/** Deterministic value in [-1, 1] from a string, used only to nudge apart
+ * bubbles that would otherwise sit exactly on top of one another -- real
+ * portfolios rarely share an identical probability and amount, but this
+ * demo's synthetic data sometimes does. */
+function jitterUnit(seed: string): number {
+  return (hashString(seed) % 2000) / 1000 - 1;
 }
 
 const VIEW_WIDTH = 960;
@@ -82,13 +94,30 @@ export function OpportunityPortfolio({ items, currency }: OpportunityPortfolioPr
       const erv = item.expected_recoverable_minor ?? 0;
       const sizeRatio = maxErv > 0 ? Math.sqrt(erv / maxErv) : 0;
 
+      // A small deterministic nudge so cases that land on (near-)identical
+      // coordinates -- common in this demo's synthetic scoring -- are still
+      // individually visible and clickable rather than fully overlapping.
+      // Bounded well within the model's own stated uncertainty ("a model
+      // estimate, not a guarantee"), so it declutters without misleading.
+      const jitterX = jitterUnit(`${item.id}:x`) * 0.05 * plotWidth;
+      const jitterY = jitterUnit(`${item.id}:y`) * 0.16 * plotHeight;
+
+      const rawX = PAD_LEFT + Math.min(1, Math.max(0, probability)) * plotWidth;
+      const rawY =
+        PAD_TOP +
+        plotHeight -
+        Math.min(1, item.amount_at_risk_minor / axisMax) * plotHeight;
+
       return {
         item,
-        x: PAD_LEFT + Math.min(1, Math.max(0, probability)) * plotWidth,
-        y:
-          PAD_TOP +
-          plotHeight -
-          (Math.min(1, item.amount_at_risk_minor / axisMax) * plotHeight),
+        x: Math.min(
+          VIEW_WIDTH - PAD_RIGHT,
+          Math.max(PAD_LEFT, rawX + jitterX),
+        ),
+        y: Math.min(
+          VIEW_HEIGHT - PAD_BOTTOM,
+          Math.max(PAD_TOP, rawY + jitterY),
+        ),
         radius: MIN_RADIUS + sizeRatio * (MAX_RADIUS - MIN_RADIUS),
         color: colorForCategory(category),
         category,

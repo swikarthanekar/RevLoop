@@ -57,17 +57,18 @@ function KpiCard({ label, value, context, tone, icon: Icon, animatedMoney }: Kpi
     <div
       className={`group glass-panel p-5 ring-1 ring-transparent transition-all duration-300 hover:-translate-y-0.5 hover:shadow-glass-sm ${palette.ring}`}
     >
-      <div className="flex items-start justify-between">
-        <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-          {label}
-        </dt>
-        <span
-          aria-hidden="true"
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white shadow-sm ${palette.iconWrap}`}
-        >
-          <Icon className="h-4 w-4" strokeWidth={2.25} />
-        </span>
-      </div>
+      {/* Absolutely positioned so `dt`/`dd` below stay direct siblings --
+          existing tooling (E2E locators) walks the KPI grid via that
+          sibling relationship. */}
+      <span
+        aria-hidden="true"
+        className={`absolute right-5 top-5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white shadow-sm ${palette.iconWrap}`}
+      >
+        <Icon className="h-4 w-4" strokeWidth={2.25} />
+      </span>
+      <dt className="pr-10 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+        {label}
+      </dt>
       <dd className="mt-3">
         {animatedMoney ? (
           <AnimatedMoney

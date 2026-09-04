@@ -28,17 +28,15 @@ const TONE_ICON_WRAP: Record<StatCardProps["tone"], string> = {
 function StatCard({ label, value, context, icon: Icon, tone }: StatCardProps) {
   return (
     <div className="glass-panel p-5">
-      <div className="flex items-start justify-between">
-        <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-          {label}
-        </dt>
-        <span
-          aria-hidden="true"
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white shadow-sm ${TONE_ICON_WRAP[tone]}`}
-        >
-          <Icon className="h-4 w-4" strokeWidth={2.25} />
-        </span>
-      </div>
+      <span
+        aria-hidden="true"
+        className={`absolute right-5 top-5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white shadow-sm ${TONE_ICON_WRAP[tone]}`}
+      >
+        <Icon className="h-4 w-4" strokeWidth={2.25} />
+      </span>
+      <dt className="pr-10 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+        {label}
+      </dt>
       <dd className="mt-3">
         <span className="block font-display text-2xl font-semibold tabular-nums tracking-tight text-neutral-900">
           {value}
@@ -59,7 +57,13 @@ interface GaugeStatCardProps {
 function GaugeStatCard({ label, context, ratio, centerText }: GaugeStatCardProps) {
   return (
     <div className="glass-panel flex items-center gap-4 p-5">
-      <RadialGauge ratio={ratio} color="#22d3ee" label={label} centerText={centerText} />
+      <RadialGauge
+        ratio={ratio}
+        color="#22d3ee"
+        label={label}
+        centerText={centerText}
+        showLabel={false}
+      />
       <div>
         <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
           {label}

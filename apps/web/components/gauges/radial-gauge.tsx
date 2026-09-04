@@ -10,19 +10,29 @@ interface RadialGaugeProps {
   label: string;
   /** Pre-formatted text rendered at the gauge's center, e.g. "82.0%". */
   centerText: string;
+  /** Set false when a caller already renders `label` next to the gauge. */
+  showLabel?: boolean;
 }
 
 /**
  * Small circular progress ring for a 0..1 backend value. Purely a visual
  * restatement of `centerText` -- the number itself always comes from the
- * caller, this component never computes a ratio of its own.
+ * caller, this component never computes a ratio of its own. `label` is
+ * always used for the accessible name, even when its visible caption
+ * (`showLabel`) is suppressed because a caller renders it elsewhere.
  */
-export function RadialGauge({ ratio, color, label, centerText }: RadialGaugeProps) {
+export function RadialGauge({
+  ratio,
+  color,
+  label,
+  centerText,
+  showLabel = true,
+}: RadialGaugeProps) {
   const clamped = Number.isFinite(ratio) ? Math.min(1, Math.max(0, ratio)) : 0;
   const offset = CIRCUMFERENCE * (1 - clamped);
 
   return (
-    <div className="flex flex-col items-center gap-1.5">
+    <div className="flex w-[76px] flex-col items-center gap-1.5">
       <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label={`${label}: ${centerText}`}>
         <circle
           cx={SIZE / 2}
@@ -55,9 +65,11 @@ export function RadialGauge({ ratio, color, label, centerText }: RadialGaugeProp
           {centerText}
         </text>
       </svg>
-      <p className="text-center text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-        {label}
-      </p>
+      {showLabel ? (
+        <p className="text-center text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+          {label}
+        </p>
+      ) : null}
     </div>
   );
 }

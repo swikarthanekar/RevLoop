@@ -101,7 +101,7 @@ export function CaseDecisionCard({
           <RadialGauge
             ratio={selectedCandidate?.success_probability ?? 0}
             color="#22d3ee"
-            label="Recovery probability"
+            label="Estimated recovery probability"
             centerText={formatRate(selectedCandidate?.success_probability ?? null)}
           />
           <RadialGauge
