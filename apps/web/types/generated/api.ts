@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Current User Identity */
+        get: operations["get_current_user_identity_api_v1_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/summary": {
         parameters: {
             query?: never;
@@ -405,6 +422,20 @@ export interface components {
             /** Case Status */
             case_status: string;
             customer_action?: components["schemas"]["CustomerActionResponse"] | null;
+        };
+        /** CurrentUserResponse */
+        CurrentUserResponse: {
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            role: components["schemas"]["UserRole"];
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
         };
         /** CustomerActionResponse */
         CustomerActionResponse: {
@@ -867,6 +898,11 @@ export interface components {
             /** Items */
             items: components["schemas"]["TimelineEntry"][];
         };
+        /**
+         * UserRole
+         * @enum {string}
+         */
+        UserRole: "ADMIN" | "OPERATOR" | "ANALYST";
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -907,6 +943,26 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    get_current_user_identity_api_v1_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrentUserResponse"];
                 };
             };
         };

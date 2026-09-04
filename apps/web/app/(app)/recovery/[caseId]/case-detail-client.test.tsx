@@ -18,6 +18,7 @@ vi.mock("next/link", () => ({
 
 import { CaseDetailClient } from "@/app/(app)/recovery/[caseId]/case-detail-client";
 import { ApiClient } from "@/lib/api/api-client";
+import { AuthSessionProvider } from "@/lib/auth/session";
 import { NullAccessTokenProvider } from "@/lib/auth/token-provider";
 import { formatMoney } from "@/lib/money/format-money";
 import {
@@ -110,7 +111,11 @@ const postCalls = (calls: CallRecord[], fragment: string) =>
   calls.filter((call) => call.method === "POST" && call.url.includes(fragment));
 
 const renderCase = (client: ApiClient) =>
-  render(<CaseDetailClient caseId={CASE_ID} apiClient={client} />);
+  render(
+    <AuthSessionProvider>
+      <CaseDetailClient caseId={CASE_ID} apiClient={client} />
+    </AuthSessionProvider>,
+  );
 
 /** Waits for the loaded header to appear. */
 const findCaseHeading = () =>

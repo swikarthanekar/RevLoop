@@ -24,17 +24,26 @@ vi.mock("@/lib/api/api-client", () => ({
 }));
 
 import { AppShell } from "@/components/app-shell/app-shell";
+import { AuthSessionProvider } from "@/lib/auth/session";
 import { ENVIRONMENT_BADGE_TEXT } from "@/lib/config/public";
 import { PRIMARY_NAV_ITEMS } from "@/components/app-shell/nav-items";
 
+/**
+ * AppShell renders TopBar, which reads useAuthSession() -- it must be
+ * wrapped in AuthSessionProvider. No Supabase env vars are set in this test
+ * environment, so the provider resolves synchronously to dev-mode
+ * "authenticated", matching this file's pre-existing "Demo operator" assertion.
+ */
+function renderShell(children: ReactNode) {
+  return render(
+    createElement(AuthSessionProvider, null, createElement(AppShell, null, children)),
+  );
+}
+
 describe("AppShell", () => {
   it("renders primary navigation entries", () => {
-    render(
-      createElement(
-        AppShell,
-        null,
-        createElement("div", { "data-testid": "main-slot" }, "Page content"),
-      ),
+    renderShell(
+      createElement("div", { "data-testid": "main-slot" }, "Page content"),
     );
 
     for (const item of PRIMARY_NAV_ITEMS) {
@@ -43,7 +52,7 @@ describe("AppShell", () => {
   });
 
   it("shows environment badge with demo/test mode text", () => {
-    render(createElement(AppShell, null, createElement("div", null, "Page content")));
+    renderShell(createElement("div", null, "Page content"));
 
     expect(screen.getByText(ENVIRONMENT_BADGE_TEXT)).toBeInTheDocument();
     expect(screen.getByText(ENVIRONMENT_BADGE_TEXT).textContent).toMatch(/DEMO/i);
@@ -51,20 +60,16 @@ describe("AppShell", () => {
   });
 
   it("shows demo auth boundary placeholder", () => {
-    render(createElement(AppShell, null, createElement("div", null, "Page content")));
+    renderShell(createElement("div", null, "Page content"));
     expect(screen.getByText("Demo operator")).toBeInTheDocument();
   });
 
   it("renders main content slot without fake KPI values", () => {
-    render(
+    renderShell(
       createElement(
-        AppShell,
-        null,
-        createElement(
-          "div",
-          { "data-testid": "main-slot" },
-          "Placeholder milestone content",
-        ),
+        "div",
+        { "data-testid": "main-slot" },
+        "Placeholder milestone content",
       ),
     );
     expect(screen.getByTestId("main-slot")).toHaveTextContent(
@@ -75,7 +80,7 @@ describe("AppShell", () => {
   });
 
   it("marks dashboard nav as current on /dashboard", () => {
-    render(createElement(AppShell, null, createElement("div", null, "Page content")));
+    renderShell(createElement("div", null, "Page content"));
     const dashboardLink = screen.getByRole("link", { name: /Dashboard/i });
     expect(dashboardLink).toHaveAttribute("aria-current", "page");
   });

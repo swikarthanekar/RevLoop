@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 
 import { ApiClient } from "@/lib/api/api-client";
 import { createAccessTokenProvider } from "@/lib/auth/token-provider";
-import { ENVIRONMENT_BADGE_TEXT, getApiBaseUrl } from "@/lib/config/public";
+import { useAuthSession } from "@/lib/auth/session";
+import { ENVIRONMENT_BADGE_TEXT, getApiBaseUrl, isSupabaseConfigured } from "@/lib/config/public";
 
 type HealthState = "unknown" | "connected" | "unavailable";
 
@@ -66,12 +67,50 @@ function ApiHealthIndicator() {
   );
 }
 
-function UserMenuPlaceholder() {
+function UserMenu() {
+  const { role, signOut } = useAuthSession();
+  const [signingOut, setSigningOut] = useState(false);
+
+  if (!isSupabaseConfigured()) {
+    return (
+      <div className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-700">
+        Demo operator
+      </div>
+    );
+  }
+
+  const handleSignOut = async () => {
+    if (signingOut) {
+      return;
+    }
+    setSigningOut(true);
+    try {
+      await signOut();
+    } finally {
+      setSigningOut(false);
+    }
+  };
+
   return (
-    <div className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-700">
-      Demo operator
+    <div className="flex items-center gap-2">
+      <span className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-700">
+        {role ? roleLabel(role) : "Signed in"}
+      </span>
+      <button
+        type="button"
+        onClick={() => void handleSignOut()}
+        disabled={signingOut}
+        aria-busy={signingOut}
+        className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {signingOut ? "Signing out…" : "Sign out"}
+      </button>
     </div>
   );
+}
+
+function roleLabel(role: string): string {
+  return role.charAt(0) + role.slice(1).toLowerCase();
 }
 
 export function TopBar() {
@@ -83,7 +122,7 @@ export function TopBar() {
       </div>
       <div className="flex items-center gap-3">
         <ApiHealthIndicator />
-        <UserMenuPlaceholder />
+        <UserMenu />
       </div>
     </header>
   );

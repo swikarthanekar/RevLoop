@@ -1,3 +1,6 @@
+import { isSupabaseConfigured } from "@/lib/config/public";
+import { getSupabaseClient } from "@/lib/auth/supabase-client";
+
 export interface AccessTokenProvider {
   getAccessToken(): Promise<string | null>;
 }
@@ -24,7 +27,25 @@ export class DevAccessTokenProvider implements AccessTokenProvider {
   }
 }
 
+/**
+ * Supplies the current Supabase session's access token, verified
+ * server-side by SupabaseAuthBackend (apps/api/app/core/auth.py). Returns
+ * null when there is no session, which the API client already treats as
+ * "send no Authorization header" -- the backend then answers 401, and the
+ * (app) route guard (lib/auth/session.tsx) is what actually gets an
+ * unauthenticated user to /login.
+ */
+export class SupabaseAccessTokenProvider implements AccessTokenProvider {
+  async getAccessToken(): Promise<string | null> {
+    const { data } = await getSupabaseClient().auth.getSession();
+    return data.session?.access_token ?? null;
+  }
+}
+
 /** The provider the browser application uses for backend requests. */
 export function createAccessTokenProvider(): AccessTokenProvider {
+  if (isSupabaseConfigured()) {
+    return new SupabaseAccessTokenProvider();
+  }
   return new DevAccessTokenProvider();
 }

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { EmptyState, ErrorState } from "@/components/async-state/error-state";
 import { ApiClient, createDefaultApiClient } from "@/lib/api/api-client";
 import { createAccessTokenProvider } from "@/lib/auth/token-provider";
-import { currentUserRole } from "@/lib/auth/role";
+import { useAuthSession } from "@/lib/auth/session";
 import { CaseActionPanel } from "@/app/(app)/recovery/[caseId]/case-action-panel";
 import { CaseCandidatesTable } from "@/app/(app)/recovery/[caseId]/case-candidates-table";
 import { CaseDecisionCard } from "@/app/(app)/recovery/[caseId]/case-decision-card";
@@ -37,6 +37,7 @@ interface CaseDetailClientProps {
  * transition optimistically.
  */
 export function CaseDetailClient({ caseId, apiClient }: CaseDetailClientProps) {
+  const { role } = useAuthSession();
   const client = useMemo(
     () => apiClient ?? createDefaultApiClient(createAccessTokenProvider()),
     [apiClient],
@@ -176,11 +177,7 @@ export function CaseDetailClient({ caseId, apiClient }: CaseDetailClientProps) {
 
   const { case: caseCore, customer, source, analysis, latest_action, outcome } =
     state.data;
-  const controls = getCaseControls(
-    caseCore.status,
-    latest_action,
-    currentUserRole(),
-  );
+  const controls = getCaseControls(caseCore.status, latest_action, role);
   const terminal = isTerminalStatus(caseCore.status);
   // latest_action.customer_action is the durable source (survives a reload
   // and covers the approve path, which never returned a link at all); the

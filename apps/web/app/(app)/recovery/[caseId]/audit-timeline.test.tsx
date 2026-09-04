@@ -18,6 +18,7 @@ vi.mock("next/link", () => ({
 
 import { CaseDetailClient } from "@/app/(app)/recovery/[caseId]/case-detail-client";
 import { ApiClient } from "@/lib/api/api-client";
+import { AuthSessionProvider } from "@/lib/auth/session";
 import { NullAccessTokenProvider } from "@/lib/auth/token-provider";
 import {
   CASE_ID,
@@ -106,7 +107,11 @@ function pageClient(
 }
 
 const renderPage = (client: ApiClient) =>
-  render(<CaseDetailClient caseId={CASE_ID} apiClient={client} />);
+  render(
+    <AuthSessionProvider>
+      <CaseDetailClient caseId={CASE_ID} apiClient={client} />
+    </AuthSessionProvider>,
+  );
 
 const findCaseHeading = () =>
   screen.findByRole("heading", { name: "Acme Learning", level: 1 });
