@@ -71,7 +71,7 @@ TERMINAL_STATUSES = frozenset(
     }
 )
 PROMPT16_EXECUTABLE = frozenset(
-    {RecoveryActionType.WAIT, RecoveryActionType.STOP}
+    {RecoveryActionType.WAIT, RecoveryActionType.STOP, RecoveryActionType.ESCALATE_TO_HUMAN}
 ) | PAYMENT_LINK_MECHANISM_ACTIONS
 IN_FLIGHT_STATUSES = frozenset(
     {
@@ -270,8 +270,12 @@ class RecoveryActionService:
             ),
         )
         case = self._reload_case(case.id, organization_id)
-        if RecoveryActionType(action.action_type) in PAYMENT_LINK_MECHANISM_ACTIONS:
+        action_type = RecoveryActionType(action.action_type)
+        if action_type in PAYMENT_LINK_MECHANISM_ACTIONS:
             self._invoke_payment_link_provider(action, case)
+            case = self._reload_case(case.id, organization_id)
+        elif action_type == RecoveryActionType.ESCALATE_TO_HUMAN:
+            self._resolve_escalation(action, case, actor_type=actor_type, actor_id=str(approver_id))
             case = self._reload_case(case.id, organization_id)
         return ApproveActionResult(
             action_id=action.id,
@@ -580,6 +584,51 @@ class RecoveryActionService:
                     action_id=action.id,
                 ),
             )
+
+    def _resolve_escalation(
+        self,
+        action: RecoveryAction,
+        case: RecoveryCase,
+        *,
+        actor_type: AuditActorType,
+        actor_id: str | None,
+    ) -> None:
+        """ESCALATE_TO_HUMAN has no provider call: approving it hands the
+        case to a human for manual follow-up outside RevLoop's automation.
+        The action is marked SUCCEEDED (the "success" being that the
+        escalation itself was recorded) and the case moves to
+        WAITING_FOR_OUTCOME exactly like a sent Payment Link -- if the human
+        collects the payment through any channel, the existing verified-
+        payment path still resolves the case to RECOVERED; if not, an
+        operator can stop it via the normal reconciliation path. This is
+        deliberately not a new terminal state: automation genuinely doesn't
+        know the outcome yet, a human does.
+        """
+        action.status = RecoveryActionStatus.SUCCEEDED.value
+        action.executed_at = _utcnow()
+        action.metadata_ = {
+            **action.metadata_,
+            "escalation_reason": "Manual review required; automated recovery paused.",
+        }
+        self._session.flush()
+        self._session.commit()
+        refreshed = self._reload_case(case.id, case.organization_id)
+        if RecoveryCaseStatus(refreshed.status) != RecoveryCaseStatus.EXECUTING:
+            return
+        self._transition(
+            case=refreshed,
+            event=RecoveryEvent.ACTION_ACCEPTED_OR_UNKNOWN,
+            context=TransitionContext(
+                organization_id=case.organization_id,
+                actor_type=actor_type,
+                actor_id=actor_id,
+                action_id=action.id,
+                reason=(
+                    "Escalated to human review: automated recovery paused "
+                    "pending manual follow-up."
+                ),
+            ),
+        )
 
     def _maybe_reconcile_payment_link_action(
         self,

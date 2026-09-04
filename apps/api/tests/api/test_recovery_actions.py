@@ -632,6 +632,53 @@ def test_payment_link_paid_cross_milestone(
     webhook_app.dependency_overrides.clear()
 
 
+def test_escalate_to_human_requires_approval_and_never_calls_the_provider(
+    action_client, db_session
+) -> None:
+    """ESCALATE_TO_HUMAN always requires approval (the manual-contact
+    policy applies to it unconditionally), and approving it must never
+    invoke the payment provider -- there is no payment link for a human
+    handoff. Answers "the bar"'s compliant-escalation requirement: a case
+    the model recommends escalating is a real, clickable, auditable action,
+    not a dead end."""
+    client, transport = action_client
+    case, run_id, _ = setup_recommended_case(
+        db_session, action_type=RecoveryActionType.ESCALATE_TO_HUMAN
+    )
+    create = _execute_action(
+        client, case.id, run_id, action_type=RecoveryActionType.ESCALATE_TO_HUMAN
+    )
+    assert create.status_code == 201
+    payload = create.json()
+    assert payload["case_status"] == RecoveryCaseStatus.AWAITING_APPROVAL.value
+    assert payload["action"]["status"] == RecoveryActionStatus.PENDING_APPROVAL.value
+    assert payload["action"]["action_type"] == RecoveryActionType.ESCALATE_TO_HUMAN.value
+    assert payload["customer_action"] is None
+    assert transport.post_count == 0
+
+    action_id = payload["action"]["id"]
+    db_session.expire_all()
+    case_row = db_session.execute(
+        select(RecoveryCase).where(RecoveryCase.id == case.id)
+    ).scalar_one()
+    approve = client.post(
+        f"/api/v1/recovery-actions/{action_id}/approve",
+        headers=ADMIN_HEADERS,
+        json={"expected_case_version": case_row.version},
+    )
+    assert approve.status_code == 200
+    assert approve.json()["case_status"] == RecoveryCaseStatus.WAITING_FOR_OUTCOME.value
+    assert approve.json()["action_status"] == RecoveryActionStatus.SUCCEEDED.value
+    assert transport.post_count == 0
+
+    db_session.expire_all()
+    action_row = db_session.execute(
+        select(RecoveryAction).where(RecoveryAction.id == action_id)
+    ).scalar_one()
+    assert action_row.action_type == RecoveryActionType.ESCALATE_TO_HUMAN.value
+    assert action_row.metadata_.get("escalation_reason")
+
+
 def test_request_alternate_payment_method_executes_immediately(
     action_client, db_session
 ) -> None:

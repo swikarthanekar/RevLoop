@@ -49,6 +49,7 @@ def test_registered_api_v1_routes_after_cleanup() -> None:
         "/api/v1/",
         "/api/v1/auth/me",
         "/api/v1/dashboard/summary",
+        "/api/v1/policies",
         "/api/v1/recovery-actions/{action_id}/approve",
         "/api/v1/recovery-actions/{action_id}/reject",
         "/api/v1/recovery-cases",
