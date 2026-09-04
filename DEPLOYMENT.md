@@ -14,29 +14,37 @@ hosting provider's environment settings and never in the repository.
 
 ---
 
-## 1. Blocker: public deployment authentication
+## 1. Authentication
 
-**A public deployment is not ready yet.** Production authentication is a
-placeholder: `SupabaseAuthBackend` in `apps/api/app/core/auth.py` raises
-`501 AUTH_NOT_CONFIGURED` for every token, no JWT library is installed, the
-frontend has no Supabase client or session, and there is no login UI.
+Two backends exist and are selected by `APP_ENV` (`apps/api/app/core/auth.py`):
 
-The only working authentication today is `DevAuthBackend`, which accepts the
-literal strings `dev-analyst`, `dev-operator` and `dev-admin` and is selected
-only when `APP_ENV` is `development` or `test`.
+- **`DevAuthBackend`** — accepts the literal bearer strings `dev-analyst`,
+  `dev-operator`, `dev-admin`, mapped to a fixed `DEV_AUTH_USER_ID` /
+  `DEV_AUTH_ORGANIZATION_ID`. Selected only when `APP_ENV` is `development`
+  or `test`.
+- **`SupabaseAuthBackend`** — verifies a real Supabase Auth access token
+  (HS256, the project's JWT secret, audience `authenticated`), then resolves
+  `organization_id`/`role` from the `user_profiles` row matching the token's
+  `sub`. Selected for every other `APP_ENV` value (i.e. `production`). A
+  verified token with no matching `user_profiles` row is `403
+  NO_ORGANIZATION_MEMBERSHIP`, not a silent grant.
 
-Consequently:
+The frontend mirrors this: `apps/web/lib/auth/session.tsx` uses Supabase Auth
+(`/login`, session persistence, sign-out) whenever
+`NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` are both set, and
+falls back to `NEXT_PUBLIC_DEV_AUTH_TOKEN` otherwise — see [section
+4.1](#41-public-environment-variables).
 
-- **Do not** set `NEXT_PUBLIC_DEV_AUTH_TOKEN` on a public Vercel deployment.
-  It is inlined into the browser bundle at build time, so it would publish an
-  ADMIN credential to anyone who opens the site.
-- A deployment with `APP_ENV=production` authenticates nothing and returns 501
-  on every authenticated route, including `POST /api/v1/demo/reset`.
+**Do not** set `NEXT_PUBLIC_DEV_AUTH_TOKEN` on a public Vercel deployment
+that also has Supabase configured (Supabase takes priority, so the dev token
+would be unused there) or, especially, on one that does **not** have
+Supabase configured — an unset Supabase config with the dev token set
+inlines an ADMIN credential into the browser bundle for anyone who opens the
+site. A production deployment should configure Supabase and leave
+`NEXT_PUBLIC_DEV_AUTH_TOKEN` unset.
 
-Closing this requires implementing Supabase JWT verification in the backend and
-a Supabase session in the frontend. That is not part of this deployment work.
-Until then, treat any deployed instance as a **private demo** whose URL is not
-shared, and see [section 10](#10-demo-reset).
+Before a real login works, a Supabase Auth user must exist and be linked to
+the demo organization — see [section 2.5](#25-provisioning-a-real-admin-user).
 
 ---
 
@@ -88,6 +96,43 @@ through the same `Settings` object the application uses
 (`apps/api/alembic/env.py`), so there is one configuration boundary.
 
 `Base.metadata.create_all()` is never used to initialize a deployed database.
+
+### 2.5 Provisioning a real admin user
+
+`SupabaseAuthBackend` verifies the token, then requires a matching
+`user_profiles` row to know which organization/role it grants — creating a
+Supabase Auth user alone is not enough.
+
+1. **Supabase Dashboard → Authentication → Users → Add user.** Set an email
+   and password (or invite by email). Copy the generated user UUID.
+2. **Supabase Dashboard → Project Settings → API → JWT Secret.** This is the
+   value for `SUPABASE_JWT_SECRET` on Railway (see [section
+   3.6](#36-backend-environment-variables)) — not a value you invent. It
+   must not start with `dev-`, or `Settings.validate_production_secrets`
+   refuses to boot in `APP_ENV=production`.
+3. **Supabase Dashboard → SQL Editor**, run (substituting the user UUID from
+   step 1 and the demo organization id from [section
+   7](#7-demo-data-and-identities)):
+
+   ```sql
+   insert into user_profiles (id, organization_id, auth_user_id, role)
+   values (
+     gen_random_uuid(),
+     '82757dbc-e0d0-5285-8f26-7a9ab9837a24',  -- demo organization
+     '<supabase-auth-user-uuid-from-step-1>',
+     'ADMIN'
+   );
+   ```
+
+   `gen_random_uuid()` is available by default on Supabase Postgres
+   (`pgcrypto`). `role` must be one of `ADMIN`, `OPERATOR`, `ANALYST`
+   (enforced by a check constraint) — use `ADMIN` for the primary demo
+   account so it can approve/reject actions and run demo reset.
+4. Sign in at `<vercel-url>/login` with that email/password. `GET
+   /api/v1/auth/me` (called by the frontend right after sign-in) should
+   return the organization and role from the row above; if it 403s with
+   `NO_ORGANIZATION_MEMBERSHIP`, the `auth_user_id` in step 3 doesn't match
+   the signed-in user's UUID.
 
 ---
 
@@ -171,12 +216,12 @@ mirrored into Vercel.
 | Variable | Value | Notes |
 | --- | --- | --- |
 | `DATABASE_URL` | Supabase session pooler URL | secret |
-| `APP_ENV` | `development` | see [section 10](#10-demo-reset); `production` cannot authenticate |
+| `APP_ENV` | `development` or `production` | see [section 10](#10-demo-reset). `development` also keeps the `DEV_AUTH_*` bearer tokens working alongside Supabase, which is convenient while rehearsing; `production` requires the frontend's Supabase config and a provisioned admin user (section 2.5) for anything to authenticate, `/demo/reset` included |
 | `DEMO_MODE` | `true` | registers the demo routes |
 | `PUBLIC_APP_BASE_URL` | `https://<project>.vercel.app` | CORS origin |
-| `DEV_AUTH_USER_ID` | `bc9f0349-0af8-557e-9557-4bdaadda544d` | canonical demo identity |
-| `DEV_AUTH_ORGANIZATION_ID` | `82757dbc-e0d0-5285-8f26-7a9ab9837a24` | canonical demo tenant |
-| `SUPABASE_JWT_SECRET` | project JWT secret | secret; currently unused by auth code |
+| `DEV_AUTH_USER_ID` | `bc9f0349-0af8-557e-9557-4bdaadda544d` | canonical demo identity; only used when `APP_ENV=development` |
+| `DEV_AUTH_ORGANIZATION_ID` | `82757dbc-e0d0-5285-8f26-7a9ab9837a24` | canonical demo tenant; only used when `APP_ENV=development` |
+| `SUPABASE_JWT_SECRET` | project JWT secret | secret; verifies every Supabase-issued token (section 2.5) — must be the real value from Supabase, not a placeholder |
 | `RAZORPAY_KEY_ID` | `rzp_test_…` | secret |
 | `RAZORPAY_KEY_SECRET` | test key secret | secret |
 | `RAZORPAY_WEBHOOK_SECRET` | webhook signing secret | secret |
@@ -203,13 +248,20 @@ exists only for the browser test suite.
 
 ### 4.1 Public environment variables
 
-Only these three `NEXT_PUBLIC_*` names are read anywhere in `apps/web`:
+Only these `NEXT_PUBLIC_*` names are read anywhere in `apps/web`:
 
 | Variable | Set on Vercel | Value |
 | --- | --- | --- |
 | `NEXT_PUBLIC_API_BASE_URL` | yes | `https://<service>.up.railway.app` |
 | `NEXT_PUBLIC_APP_MODE` | optional | `demo` (the default and only accepted value) |
-| `NEXT_PUBLIC_DEV_AUTH_TOKEN` | **no** | see [section 1](#1-blocker-public-deployment-authentication) |
+| `NEXT_PUBLIC_SUPABASE_URL` | yes, for a real login | `https://<project-ref>.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | yes, for a real login | Supabase anon/public key — safe to expose (Supabase's own design); used only for Auth, never data access |
+| `NEXT_PUBLIC_DEV_AUTH_TOKEN` | **no**, once Supabase is set | see [section 1](#1-authentication) |
+
+Both `NEXT_PUBLIC_SUPABASE_*` variables must be set together — the frontend
+requires a real Supabase sign-in whenever they're both present (`/login`
+becomes functional) and falls back to `NEXT_PUBLIC_DEV_AUTH_TOKEN` only when
+either is absent.
 
 The variable is `NEXT_PUBLIC_API_BASE_URL`, not `NEXT_PUBLIC_API_URL`.
 `NEXT_PUBLIC_*` values are inlined into the browser bundle at build time, so
@@ -337,21 +389,20 @@ value. `DEMO_MODE` is a separate switch that only controls route registration.
 
 | `APP_ENV` | `DEMO_MODE` | Result |
 | --- | --- | --- |
-| `development` | `true` | Demo routes exist; `Bearer dev-admin` resolves ADMIN. **Working demo.** |
+| `development` | `true` | Demo routes exist; `Bearer dev-admin` resolves ADMIN. **Working demo, simplest to rehearse with.** |
 | `development` | `false` | Routes not registered → 404. |
-| `production` | `true` | Routes registered, but every token is rejected with 501. Reset unreachable. |
-| `production` | `false` | Neither route nor auth. |
+| `production` | `true` | Routes registered; a verified Supabase token for a `user_profiles` row with `role=ADMIN` (section 2.5) resolves ADMIN and can reset. `dev-admin` no longer works here — production selects `SupabaseAuthBackend`. |
+| `production` | `false` | No route to call. |
 
-So the deployed demo must run with `APP_ENV=development` and `DEMO_MODE=true`.
-This is a direct consequence of the authentication blocker in section 1: the
-production guards are not preventing reset arbitrarily, they are refusing to
-authenticate at all because Supabase JWT verification does not exist yet.
+Either working combination's route-level protections are identical: demo
+mode registration, server-resolved ADMIN role, and tenant scoping all apply
+regardless of which auth backend resolved that role.
 
-`APP_ENV=development` also means the production secret validation does not run,
-so the operator is responsible for setting real Razorpay Test Mode credentials.
-The route's own protections are unchanged and are not weakened by this: demo
-mode registration, server-resolved ADMIN role, and tenant scoping all still
-apply.
+`APP_ENV=development` additionally skips the production secret validation, so
+the operator is responsible for setting real Razorpay Test Mode credentials
+even though nothing enforces it. `APP_ENV=production` runs that validation
+(`Settings.validate_production_secrets`) and refuses to boot on a
+`dev-`-prefixed secret.
 
 ### 10.2 Procedure
 
@@ -359,6 +410,11 @@ apply.
 POST https://<service>.up.railway.app/api/v1/demo/reset
 Authorization: Bearer dev-admin
 ```
+
+With `APP_ENV=production`, replace the header with a real Supabase access
+token for the provisioned admin user (obtain it by signing in at `/login`
+and reading it from the Supabase client session, e.g. via the browser
+devtools network tab on the `/api/v1/auth/me` request).
 
 The reset deletes and reseeds the demo tenant in a single transaction, so a
 failure rolls back rather than leaving a half-reset database.

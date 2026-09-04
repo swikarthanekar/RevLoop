@@ -294,20 +294,33 @@ bridge can resolve `scripts/ml`:
 docker build -t revloop-api .
 ```
 
+## Authentication
+
+Two backends, selected by `APP_ENV` (`apps/api/app/core/auth.py`):
+
+- **`DevAuthBackend`** (`APP_ENV=development`/`test`) — literal bearer
+  tokens `dev-analyst`, `dev-operator`, `dev-admin`, resolved to a fixed
+  demo identity. What local development, tests, and the E2E suite run
+  against.
+- **`SupabaseAuthBackend`** (`APP_ENV=production`) — verifies a real
+  Supabase Auth access token and resolves `organization_id`/`role` from a
+  `user_profiles` row matching the token's subject. Backed by a real `/login`
+  page (`apps/web/app/login`) with session persistence and sign-out.
+
+The frontend mirrors this automatically: it uses Supabase Auth whenever
+`NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` are both set, and
+falls back to the dev-token path otherwise — see
+`apps/web/lib/auth/session.tsx`. Provisioning a real admin user (creating the
+Supabase Auth user and its `user_profiles` row) is covered in
+`DEPLOYMENT.md` section 2.5.
+
 ## Demo mode
 
 `DEMO_MODE=true` registers `/api/v1/demo/*` (reset, run-batch); these routes
-do not exist when demo mode is off. `APP_ENV=development` or `test` selects
-`DevAuthBackend`, which accepts the literal bearer tokens `dev-analyst`,
-`dev-operator`, and `dev-admin` — this is what the current UI and E2E suite
-run against.
+do not exist when demo mode is off, in either auth mode.
 
 ## Limitations
 
-- **Production authentication is not implemented.** `SupabaseAuthBackend`
-  currently returns `501` for every token; only the development bearer
-  tokens work. A public deployment today is a private demo, not a
-  production-ready multi-tenant system — see `DEPLOYMENT.md` section 1.
 - **Batch/model evaluation uses synthetic data**, clearly labeled as such
   everywhere it's surfaced; only the single live Payment-Link-to-webhook
   flow runs against real Razorpay Test Mode.
