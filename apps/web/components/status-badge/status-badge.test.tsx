@@ -1,6 +1,6 @@
 import { createElement } from "react";
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { act, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   RECOVERY_CASE_STATUS_MAP,
@@ -26,5 +26,53 @@ describe("StatusBadge", () => {
     expect(badge).toBeInTheDocument();
     expect(badge.className).toContain("neutral");
     expect(badge.className).not.toContain("emerald");
+  });
+
+  it("does not highlight on first mount", () => {
+    render(createElement(StatusBadge, { status: "RECOVERED" }));
+    const badge = screen.getByText("Recovered");
+    expect(badge.className).not.toContain("scale-110");
+  });
+
+  it("briefly highlights when the status changes after mount", () => {
+    vi.useFakeTimers();
+    const { rerender } = render(createElement(StatusBadge, { status: "EXECUTING" }));
+
+    rerender(createElement(StatusBadge, { status: "RECOVERED" }));
+
+    const badge = screen.getByText("Recovered");
+    expect(badge.className).toContain("scale-110");
+
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(badge.className).not.toContain("scale-110");
+    vi.useRealTimers();
+  });
+
+  it("does not highlight when re-rendered with the same status", () => {
+    const { rerender } = render(createElement(StatusBadge, { status: "EXECUTING" }));
+    rerender(createElement(StatusBadge, { status: "EXECUTING" }));
+
+    const badge = screen.getByText("Executing");
+    expect(badge.className).not.toContain("scale-110");
+  });
+
+  it("skips the highlight when the user prefers reduced motion", () => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: true,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+
+    const { rerender } = render(createElement(StatusBadge, { status: "EXECUTING" }));
+    rerender(createElement(StatusBadge, { status: "RECOVERED" }));
+
+    const badge = screen.getByText("Recovered");
+    expect(badge.className).not.toContain("scale-110");
+
+    // @ts-expect-error -- test-only cleanup of a jsdom global stubbed above.
+    delete window.matchMedia;
   });
 });
