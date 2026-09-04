@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { LogOut } from "lucide-react";
 
 import { ApiClient } from "@/lib/api/api-client";
 import { createAccessTokenProvider } from "@/lib/auth/token-provider";
@@ -20,6 +21,12 @@ function EnvironmentBadge() {
     </span>
   );
 }
+
+const HEALTH_DOT: Record<HealthState, string> = {
+  unknown: "bg-neutral-400",
+  connected: "bg-emerald-500",
+  unavailable: "bg-rose-500",
+};
 
 function ApiHealthIndicator() {
   const [healthState, setHealthState] = useState<HealthState>("unknown");
@@ -59,9 +66,15 @@ function ApiHealthIndicator() {
 
   return (
     <span
-      className="rounded-md border border-neutral-300 bg-neutral-50 px-2 py-1 text-xs text-neutral-700"
+      className="inline-flex items-center gap-1.5 rounded-md border border-neutral-300 bg-neutral-50 px-2 py-1 text-xs text-neutral-700"
       aria-live="polite"
     >
+      <span
+        aria-hidden="true"
+        className={`h-1.5 w-1.5 rounded-full ${HEALTH_DOT[healthState]} ${
+          healthState === "connected" ? "animate-pulse" : ""
+        }`}
+      />
       {label}
     </span>
   );
@@ -101,8 +114,9 @@ function UserMenu() {
         onClick={() => void handleSignOut()}
         disabled={signingOut}
         aria-busy={signingOut}
-        className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-50"
       >
+        <LogOut className="h-3.5 w-3.5" aria-hidden="true" strokeWidth={2} />
         {signingOut ? "Signing out…" : "Sign out"}
       </button>
     </div>
@@ -115,7 +129,7 @@ function roleLabel(role: string): string {
 
 export function TopBar() {
   return (
-    <header className="flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-3">
+    <header className="flex items-center justify-between border-b border-neutral-200/80 bg-white/80 px-4 py-3 backdrop-blur-md">
       <div className="flex items-center gap-3">
         <span className="text-sm font-medium text-neutral-800">Merchant demo workspace</span>
         <EnvironmentBadge />

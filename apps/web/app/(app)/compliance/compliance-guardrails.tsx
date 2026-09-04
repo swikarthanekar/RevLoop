@@ -1,5 +1,8 @@
+import type { LucideIcon } from "lucide-react";
+import { MessageSquare, Repeat, ShieldCheck, ShieldOff, Timer, Wallet } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { RadialGauge } from "@/components/gauges/radial-gauge";
 import { Money } from "@/components/money/money";
 import { humanizeEnumLabel } from "@/app/(app)/compliance/compliance-format";
 import type {
@@ -11,31 +14,58 @@ interface StatCardProps {
   label: string;
   value: ReactNode;
   context: string;
-  accent?: "on" | "off" | "neutral";
+  icon: LucideIcon;
+  tone: "on" | "off" | "amber" | "neutral";
 }
 
-const ACCENT_BAR: Record<NonNullable<StatCardProps["accent"]>, string> = {
-  on: "bg-emerald-600",
-  off: "bg-rose-500",
-  neutral: "bg-neutral-400",
+const TONE_ICON_WRAP: Record<StatCardProps["tone"], string> = {
+  on: "bg-gradient-to-br from-emerald-400 to-teal-500",
+  off: "bg-gradient-to-br from-rose-400 to-red-500",
+  amber: "bg-gradient-to-br from-amber-400 to-orange-500",
+  neutral: "bg-gradient-to-br from-neutral-400 to-neutral-500",
 };
 
-function StatCard({ label, value, context, accent = "neutral" }: StatCardProps) {
+function StatCard({ label, value, context, icon: Icon, tone }: StatCardProps) {
   return (
-    <div className="relative overflow-hidden rounded-lg border border-neutral-200 bg-white p-5">
-      <span
-        aria-hidden="true"
-        className={`absolute inset-x-0 top-0 h-1 ${ACCENT_BAR[accent]}`}
-      />
-      <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-        {label}
-      </dt>
-      <dd className="mt-2">
-        <span className="block text-2xl font-semibold tabular-nums tracking-tight text-neutral-900">
+    <div className="glass-panel p-5">
+      <div className="flex items-start justify-between">
+        <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+          {label}
+        </dt>
+        <span
+          aria-hidden="true"
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white shadow-sm ${TONE_ICON_WRAP[tone]}`}
+        >
+          <Icon className="h-4 w-4" strokeWidth={2.25} />
+        </span>
+      </div>
+      <dd className="mt-3">
+        <span className="block font-display text-2xl font-semibold tabular-nums tracking-tight text-neutral-900">
           {value}
         </span>
         <span className="mt-1 block text-sm text-neutral-600">{context}</span>
       </dd>
+    </div>
+  );
+}
+
+interface GaugeStatCardProps {
+  label: string;
+  context: string;
+  ratio: number;
+  centerText: string;
+}
+
+function GaugeStatCard({ label, context, ratio, centerText }: GaugeStatCardProps) {
+  return (
+    <div className="glass-panel flex items-center gap-4 p-5">
+      <RadialGauge ratio={ratio} color="#22d3ee" label={label} centerText={centerText} />
+      <div>
+        <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+          {label}
+        </dt>
+        <dd className="mt-1 text-sm text-neutral-600">{context}</dd>
+      </div>
     </div>
   );
 }
@@ -69,7 +99,7 @@ interface ActionGroupProps {
 
 function ActionGroup({ title, description, actionTypes, emptyNote }: ActionGroupProps) {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-5">
+    <div className="glass-panel p-5">
       <h3 className="text-sm font-semibold text-neutral-900">{title}</h3>
       <p className="mt-0.5 text-sm text-neutral-600">{description}</p>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -96,6 +126,8 @@ interface ComplianceGuardrailsProps {
  * grouping is the literal enforced configuration, read back.
  */
 export function ComplianceGuardrails({ policy }: ComplianceGuardrailsProps) {
+  const confidenceText = `${(policy.minimum_auto_confidence * 100).toFixed(0)}%`;
+
   return (
     <div className="space-y-6">
       <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -107,7 +139,8 @@ export function ComplianceGuardrails({ policy }: ComplianceGuardrailsProps) {
               ? "Eligible actions execute automatically, subject to the limits below"
               : "Every action currently requires manual approval"
           }
-          accent={policy.automation_enabled ? "on" : "off"}
+          icon={policy.automation_enabled ? ShieldCheck : ShieldOff}
+          tone={policy.automation_enabled ? "on" : "off"}
         />
         <StatCard
           label="Auto-action limit"
@@ -118,26 +151,35 @@ export function ComplianceGuardrails({ policy }: ComplianceGuardrailsProps) {
             />
           }
           context="Above this amount, an action always requires manual approval"
+          icon={Wallet}
+          tone="amber"
         />
-        <StatCard
+        <GaugeStatCard
           label="Minimum confidence"
-          value={`${(policy.minimum_auto_confidence * 100).toFixed(0)}%`}
           context="Below this confidence, an action always requires manual approval"
+          ratio={policy.minimum_auto_confidence}
+          centerText={confidenceText}
         />
         <StatCard
           label="Max attempts per case"
           value={String(policy.max_recovery_attempts)}
           context="Recovery stops once a case reaches this many attempts"
+          icon={Repeat}
+          tone="neutral"
         />
         <StatCard
           label="Max contacts / 24h"
           value={String(policy.max_contacts_per_24h)}
           context="Customer-facing contact is capped per case per day"
+          icon={MessageSquare}
+          tone="neutral"
         />
         <StatCard
           label="Cooldown between contacts"
           value={formatMinutes(policy.cooldown_minutes)}
           context="Minimum wait before the same case can be contacted again"
+          icon={Timer}
+          tone="neutral"
         />
       </dl>
 

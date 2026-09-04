@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { EmptyState, ErrorState } from "@/components/async-state/error-state";
 import type { ApiClient } from "@/lib/api/api-client";
+import { OpportunityPortfolio } from "@/app/(app)/recovery/opportunity-portfolio";
 import { RecoveryFilters } from "@/app/(app)/recovery/recovery-filters";
 import { RecoveryPagination } from "@/app/(app)/recovery/recovery-pagination";
 import { RecoveryTable } from "@/app/(app)/recovery/recovery-table";
@@ -143,14 +144,20 @@ export function RecoveryClient({ apiClient }: RecoveryClientProps) {
       ) : null}
 
       {state.status === "ready" && state.data.items.length > 0 ? (
-        <div className="space-y-3 rounded-lg border border-neutral-200 bg-white p-2">
-          <RecoveryTable items={state.data.items} />
-          <RecoveryPagination
-            total={state.data.total}
-            limit={state.data.limit}
-            offset={state.data.offset}
-            onOffsetChange={setOffset}
+        <div className="space-y-4">
+          <OpportunityPortfolio
+            items={state.data.items}
+            currency={state.data.items[0]?.currency ?? "INR"}
           />
+          <div className="space-y-3 rounded-lg border border-neutral-200 bg-white p-2">
+            <RecoveryTable items={state.data.items} />
+            <RecoveryPagination
+              total={state.data.total}
+              limit={state.data.limit}
+              offset={state.data.offset}
+              onOffsetChange={setOffset}
+            />
+          </div>
         </div>
       ) : null}
     </div>
