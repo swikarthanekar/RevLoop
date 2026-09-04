@@ -36,9 +36,9 @@ interface CaseActionPanelProps {
 }
 
 const PRIMARY_BUTTON =
-  "inline-flex items-center justify-center rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex items-center justify-center rounded-md bg-accent px-3 py-2 text-sm font-medium text-on-accent hover:bg-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-50";
 const SECONDARY_BUTTON =
-  "inline-flex items-center justify-center rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex items-center justify-center rounded-md border border-line bg-surface px-3 py-2 text-sm font-medium text-ink hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-50";
 
 /**
  * State-dependent action controls.
@@ -82,7 +82,7 @@ export function CaseActionPanel({
 
   return (
     <CaseSection title="Action control" headingId="case-action-heading">
-      <p className="text-sm text-neutral-700">
+      <p className="text-sm text-ink">
         {describeControlAvailability(status)}
       </p>
 
@@ -123,7 +123,7 @@ export function CaseActionPanel({
             ) : null}
 
             {requiresApproval && !policyBlocked ? (
-              <p className="text-sm text-neutral-700">
+              <p className="text-sm text-ink">
                 This action requires approval. Submitting creates an approval
                 request rather than executing immediately.
               </p>
@@ -144,7 +144,7 @@ export function CaseActionPanel({
         ) : null}
 
         {controls.executeBlockedByRole ? (
-          <p className="rounded-md border border-neutral-200 bg-neutral-50 p-3 text-sm text-neutral-700">
+          <p className="rounded-md border border-line bg-surface-hover p-3 text-sm text-ink">
             A recommendation is ready to execute, but your role cannot
             execute recovery actions. Ask an operator or admin to complete
             this action.
@@ -152,15 +152,15 @@ export function CaseActionPanel({
         ) : null}
 
         {controls.approvalBlockedByRole ? (
-          <p className="rounded-md border border-neutral-200 bg-neutral-50 p-3 text-sm text-neutral-700">
+          <p className="rounded-md border border-line bg-surface-hover p-3 text-sm text-ink">
             Pending approval. Only an admin can approve or reject this
             action.
           </p>
         ) : null}
 
         {controls.canApprove || controls.canReject ? (
-          <div className="space-y-3 rounded-md border border-neutral-200 p-3">
-            <p className="text-sm text-neutral-700">
+          <div className="space-y-3 rounded-md border border-line p-3">
+            <p className="text-sm text-ink">
               Approval is authorized by the backend. If your role is not
               permitted, the request is rejected server-side.
             </p>
@@ -193,7 +193,7 @@ export function CaseActionPanel({
             <div>
               <label
                 htmlFor="case-reject-reason"
-                className="block text-xs font-medium text-neutral-600"
+                className="block text-xs font-medium text-ink-muted"
               >
                 Rejection reason (required to reject)
               </label>
@@ -202,16 +202,16 @@ export function CaseActionPanel({
                 type="text"
                 value={rejectReason}
                 onChange={(event) => setRejectReason(event.target.value)}
-                className="mt-1 w-full rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500"
+                className="mt-1 w-full rounded-md border border-line px-2.5 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500"
               />
             </div>
 
-            <label className="flex items-center gap-2 text-xs text-neutral-700">
+            <label className="flex items-center gap-2 text-xs text-ink">
               <input
                 type="checkbox"
                 checked={reanalyze}
                 onChange={(event) => setReanalyze(event.target.checked)}
-                className="rounded border-neutral-300"
+                className="rounded border-line"
               />
               Re-analyze alternatives after rejection
             </label>
@@ -219,7 +219,7 @@ export function CaseActionPanel({
         ) : null}
 
         {status === "SCHEDULED" && latestAction?.scheduled_for ? (
-          <p className="text-sm text-neutral-800">
+          <p className="text-sm text-ink">
             Scheduled for{" "}
             <time
               dateTime={latestAction.scheduled_for}
@@ -233,7 +233,7 @@ export function CaseActionPanel({
         {status === "WAITING_FOR_OUTCOME" ? (
           <div className="space-y-2">
             {latestAction?.provider_reference ? (
-              <p className="text-sm text-neutral-800">
+              <p className="text-sm text-ink">
                 Provider reference:{" "}
                 <span className="font-mono text-xs">
                   {latestAction.provider_reference}
@@ -242,19 +242,19 @@ export function CaseActionPanel({
             ) : null}
 
             {paymentLinkUrl ? (
-              <div className="rounded-md border border-neutral-200 bg-neutral-50 p-3">
-                <p className="text-xs font-medium text-neutral-700">
+              <div className="rounded-md border border-line bg-surface-hover p-3">
+                <p className="text-xs font-medium text-ink">
                   Customer payment link
                 </p>
                 <a
                   href={paymentLinkUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1 block break-all font-mono text-xs text-neutral-800 underline focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500"
+                  className="mt-1 block break-all font-mono text-xs text-ink underline focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500"
                 >
                   {paymentLinkUrl}
                 </a>
-                <p className="mt-1 text-[11px] text-neutral-500">
+                <p className="mt-1 text-[11px] text-ink-muted">
                   {ENVIRONMENT_BADGE_TEXT}
                 </p>
               </div>
@@ -270,7 +270,7 @@ export function CaseActionPanel({
               {isRefreshing ? "Refreshing…" : "Refresh status"}
             </button>
 
-            <p className="text-xs text-neutral-500" aria-live="polite">
+            <p className="text-xs text-ink-muted" aria-live="polite">
               {pollExhausted
                 ? "Automatic status checks have stopped. Use Refresh status to check again."
                 : "Automatically checking for a provider outcome every few seconds."}
@@ -279,7 +279,7 @@ export function CaseActionPanel({
         ) : null}
 
         {latestAction ? (
-          <p className="border-t border-neutral-100 pt-3 text-xs text-neutral-600">
+          <p className="border-t border-line pt-3 text-xs text-ink-muted">
             Latest action: {humanizeEnumLabel(latestAction.action_type)} ·{" "}
             {humanizeEnumLabel(latestAction.status)} · attempt{" "}
             <span className="tabular-nums">{latestAction.attempt_number}</span>

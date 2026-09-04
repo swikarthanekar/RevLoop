@@ -22,19 +22,19 @@ const ACCENT_BAR: Record<NonNullable<StatCardProps["accent"]>, string> = {
 
 function StatCard({ label, value, context, accent = "neutral" }: StatCardProps) {
   return (
-    <div className="relative overflow-hidden rounded-lg border border-neutral-200 bg-white p-5">
+    <div className="relative overflow-hidden rounded-lg border border-line bg-surface p-5">
       <span
         aria-hidden="true"
         className={`absolute inset-x-0 top-0 h-1 ${ACCENT_BAR[accent]}`}
       />
-      <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+      <dt className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
         {label}
       </dt>
       <dd className="mt-2">
-        <span className="block text-2xl font-semibold tabular-nums tracking-tight text-neutral-900">
+        <span className="block text-2xl font-semibold tabular-nums tracking-tight text-ink">
           {value}
         </span>
-        <span className="mt-1 block text-sm text-neutral-600">{context}</span>
+        <span className="mt-1 block text-sm text-ink-muted">{context}</span>
       </dd>
     </div>
   );
@@ -54,7 +54,7 @@ function formatMinutes(minutes: number): string {
 
 function ActionTypePill({ actionType }: { actionType: RecoveryActionType }) {
   return (
-    <span className="inline-flex items-center rounded-full border border-neutral-300 bg-neutral-50 px-2.5 py-1 text-xs font-medium text-neutral-800">
+    <span className="inline-flex items-center rounded-full border border-line bg-surface-hover px-2.5 py-1 text-xs font-medium text-ink">
       {humanizeEnumLabel(actionType)}
     </span>
   );
@@ -69,16 +69,16 @@ interface ActionGroupProps {
 
 function ActionGroup({ title, description, actionTypes, emptyNote }: ActionGroupProps) {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-5">
-      <h3 className="text-sm font-semibold text-neutral-900">{title}</h3>
-      <p className="mt-0.5 text-sm text-neutral-600">{description}</p>
+    <div className="rounded-lg border border-line bg-surface p-5">
+      <h3 className="text-sm font-semibold text-ink">{title}</h3>
+      <p className="mt-0.5 text-sm text-ink-muted">{description}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {actionTypes.length > 0 ? (
           actionTypes.map((actionType) => (
             <ActionTypePill key={actionType} actionType={actionType} />
           ))
         ) : (
-          <p className="text-sm text-neutral-500">{emptyNote}</p>
+          <p className="text-sm text-ink-muted">{emptyNote}</p>
         )}
       </div>
     </div>

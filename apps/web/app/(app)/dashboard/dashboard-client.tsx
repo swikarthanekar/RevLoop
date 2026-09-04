@@ -40,11 +40,11 @@ export function DashboardClient({ apiClient }: DashboardClientProps) {
 
       {state.status === "error" ? (
         <div className="space-y-3">
-          <p className="text-sm text-neutral-700">
+          <p className="text-sm text-ink">
             Dashboard metrics are temporarily unavailable.{" "}
             <Link
               href="/recovery"
-              className="font-medium text-neutral-900 underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500"
+              className="font-medium text-ink underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500"
             >
               Recovery cases can still be viewed.
             </Link>

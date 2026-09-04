@@ -2,7 +2,7 @@ import { InlineSkeleton } from "@/components/async-state/loading-state";
 
 function KpiCardSkeleton() {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-5">
+    <div className="rounded-lg border border-line bg-surface p-5">
       <InlineSkeleton className="h-3 w-28" />
       <InlineSkeleton className="mt-3 h-8 w-36" />
       <InlineSkeleton className="mt-2 h-3 w-24" />
@@ -12,7 +12,7 @@ function KpiCardSkeleton() {
 
 function SectionSkeleton({ bodyHeight }: { bodyHeight: string }) {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-5">
+    <div className="rounded-lg border border-line bg-surface p-5">
       <InlineSkeleton className="h-4 w-44" />
       <InlineSkeleton className="mt-2 h-3 w-64" />
       <InlineSkeleton className={`mt-5 w-full ${bodyHeight}`} />

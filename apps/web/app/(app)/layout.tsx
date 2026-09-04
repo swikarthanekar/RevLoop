@@ -32,8 +32,8 @@ export default function ShellLayout({
 
   if (session.status === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-50">
-        <p className="text-sm text-neutral-500">Loading…</p>
+      <div className="flex min-h-screen items-center justify-center bg-canvas">
+        <p className="text-sm text-ink-muted">Loading…</p>
       </div>
     );
   }

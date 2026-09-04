@@ -147,7 +147,7 @@ export function CaseDetailClient({ caseId, apiClient }: CaseDetailClientProps) {
   if (state.status === "not-found") {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+        <h1 className="text-2xl font-semibold tracking-tight text-ink">
           Recovery case
         </h1>
         <EmptyState
@@ -156,7 +156,7 @@ export function CaseDetailClient({ caseId, apiClient }: CaseDetailClientProps) {
         />
         <Link
           href="/recovery"
-          className="inline-flex items-center rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500"
+          className="inline-flex items-center rounded-md border border-line bg-surface px-3 py-1.5 text-sm font-medium text-ink hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500"
         >
           Back to Recovery Opportunities
         </Link>
@@ -167,7 +167,7 @@ export function CaseDetailClient({ caseId, apiClient }: CaseDetailClientProps) {
   if (state.status === "error") {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+        <h1 className="text-2xl font-semibold tracking-tight text-ink">
           Recovery case
         </h1>
         <ErrorState error={state.error} onRetry={refresh} />
@@ -250,15 +250,15 @@ function CaseActionPanelTerminalNotice({ status }: { status: string }) {
   return (
     <section
       aria-labelledby="case-action-heading"
-      className="rounded-lg border border-neutral-200 bg-white p-4"
+      className="rounded-lg border border-line bg-surface p-4"
     >
       <h2
         id="case-action-heading"
-        className="text-sm font-semibold uppercase tracking-wide text-neutral-500"
+        className="text-sm font-semibold uppercase tracking-wide text-ink-muted"
       >
         Action control
       </h2>
-      <p className="mt-3 text-sm text-neutral-700">
+      <p className="mt-3 text-sm text-ink">
         This case is in the terminal state {status}. No recovery actions are
         available.
       </p>

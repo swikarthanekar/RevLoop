@@ -51,12 +51,12 @@ export function CaseOutcomeCard({ caseCore, outcome }: CaseOutcomeCardProps) {
         className={`rounded-md border p-4 ${
           isRecovered
             ? "border-emerald-300 bg-emerald-50"
-            : "border-neutral-300 bg-neutral-50"
+            : "border-line bg-surface-hover"
         }`}
       >
         <p
           className={`text-sm font-semibold uppercase tracking-wide ${
-            isRecovered ? "text-emerald-900" : "text-neutral-800"
+            isRecovered ? "text-emerald-900" : "text-ink"
           }`}
         >
           {headline}
@@ -68,13 +68,13 @@ export function CaseOutcomeCard({ caseCore, outcome }: CaseOutcomeCardProps) {
           </p>
         ) : null}
 
-        <p className="mt-2 text-sm text-neutral-700">
+        <p className="mt-2 text-sm text-ink">
           {TERMINAL_DESCRIPTION[status] ??
             "This case has reached a terminal state."}
         </p>
 
         {outcome ? (
-          <p className="mt-1 text-sm text-neutral-700">
+          <p className="mt-1 text-sm text-ink">
             Verified via {humanizeEnumLabel(outcome.verification_source)}
           </p>
         ) : null}
@@ -105,7 +105,7 @@ export function CaseOutcomeCard({ caseCore, outcome }: CaseOutcomeCardProps) {
           </DefinitionRow>
         </dl>
       ) : (
-        <p className="mt-3 text-sm text-neutral-600">
+        <p className="mt-3 text-sm text-ink-muted">
           No outcome record is available for this case.
         </p>
       )}

@@ -97,10 +97,10 @@ export function RecoveryClient({ apiClient }: RecoveryClientProps) {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+        <h1 className="text-2xl font-semibold tracking-tight text-ink">
           Recovery Opportunities
         </h1>
-        <p className="mt-1 text-sm text-neutral-600">
+        <p className="mt-1 text-sm text-ink-muted">
           {total === null
             ? "Prioritized recoverable revenue cases."
             : `${formatCount(total)} ${total === 1 ? "case" : "cases"}${
@@ -118,7 +118,7 @@ export function RecoveryClient({ apiClient }: RecoveryClientProps) {
       />
 
       {state.status === "loading" ? (
-        <div className="rounded-lg border border-neutral-200 bg-white p-2">
+        <div className="rounded-lg border border-line bg-surface p-2">
           <RecoveryTableSkeleton />
         </div>
       ) : null}
@@ -143,7 +143,7 @@ export function RecoveryClient({ apiClient }: RecoveryClientProps) {
       ) : null}
 
       {state.status === "ready" && state.data.items.length > 0 ? (
-        <div className="space-y-3 rounded-lg border border-neutral-200 bg-white p-2">
+        <div className="space-y-3 rounded-lg border border-line bg-surface p-2">
           <RecoveryTable items={state.data.items} />
           <RecoveryPagination
             total={state.data.total}

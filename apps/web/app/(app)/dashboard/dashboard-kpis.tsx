@@ -34,27 +34,27 @@ function KpiCard({
   animatedMoney,
 }: KpiCardProps) {
   return (
-    <div className="relative overflow-hidden rounded-lg border border-neutral-200 bg-white p-5">
+    <div className="relative overflow-hidden rounded-lg border border-line bg-surface p-5">
       <span
         aria-hidden="true"
         className={`absolute inset-x-0 top-0 h-1 ${ACCENT_BAR[accent]}`}
       />
-      <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+      <dt className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
         {label}
       </dt>
       <dd className="mt-2">
         {animatedMoney ? (
           <AnimatedMoney
-            className="block text-3xl font-semibold tabular-nums tracking-tight text-neutral-900"
+            className="block text-3xl font-semibold tabular-nums tracking-tight text-ink"
             amountMinor={animatedMoney.amountMinor}
             currency={animatedMoney.currency}
           />
         ) : (
-          <span className="block text-3xl font-semibold tabular-nums tracking-tight text-neutral-900">
+          <span className="block text-3xl font-semibold tabular-nums tracking-tight text-ink">
             {value}
           </span>
         )}
-        <span className="mt-1 block text-sm text-neutral-600">{context}</span>
+        <span className="mt-1 block text-sm text-ink-muted">{context}</span>
       </dd>
     </div>
   );
@@ -68,10 +68,10 @@ interface CompactStatProps {
 function CompactStat({ label, value }: CompactStatProps) {
   return (
     <div className="flex flex-col gap-0.5 px-5 py-3">
-      <dt className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+      <dt className="text-xs font-medium uppercase tracking-wide text-ink-muted">
         {label}
       </dt>
-      <dd className="text-lg font-semibold tabular-nums text-neutral-900">
+      <dd className="text-lg font-semibold tabular-nums text-ink">
         {value}
       </dd>
     </div>
@@ -117,7 +117,7 @@ export function DashboardKpis({ summary }: DashboardKpisProps) {
         />
       </dl>
 
-      <dl className="flex flex-wrap divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white sm:divide-x sm:divide-y-0">
+      <dl className="flex flex-wrap divide-y divide-line rounded-lg border border-line bg-surface sm:divide-x sm:divide-y-0">
         <CompactStat
           label="Active cases"
           value={formatCount(summary.active_cases)}

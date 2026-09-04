@@ -22,10 +22,10 @@ export function ComplianceClient({ apiClient }: ComplianceClientProps) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+          <h1 className="text-2xl font-semibold tracking-tight text-ink">
             Compliance Guardrails
           </h1>
-          <p className="mt-1 text-sm text-neutral-600">
+          <p className="mt-1 text-sm text-ink-muted">
             The exact merchant policy the decision engine enforces on every
             recovery action -- not a description of intended behavior.
           </p>
@@ -36,7 +36,7 @@ export function ComplianceClient({ apiClient }: ComplianceClientProps) {
           onClick={refresh}
           disabled={isRefreshing}
           aria-busy={isRefreshing}
-          className="inline-flex items-center rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center rounded-md border border-line bg-surface px-3 py-2 text-sm font-medium text-ink hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isRefreshing ? "Refreshing…" : "Refresh"}
         </button>

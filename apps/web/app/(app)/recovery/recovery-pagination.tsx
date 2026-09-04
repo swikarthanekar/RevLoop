@@ -27,14 +27,14 @@ export function RecoveryPagination({
   const hasNext = offset + safeLimit < total;
 
   const buttonClass =
-    "rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-50";
+    "rounded-md border border-line bg-surface px-3 py-1.5 text-sm font-medium text-ink hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
     <nav
       aria-label="Recovery cases pagination"
-      className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 px-1 pt-3"
+      className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-1 pt-3"
     >
-      <p className="text-sm text-neutral-600" aria-live="polite">
+      <p className="text-sm text-ink-muted" aria-live="polite">
         {total === 0
           ? "No cases to display"
           : `Showing ${formatCount(firstRow)}–${formatCount(lastRow)} of ${formatCount(total)} cases`}

@@ -13,7 +13,7 @@ interface CaseCandidatesTableProps {
 }
 
 const HEADER_CELL =
-  "whitespace-nowrap px-3 py-2 text-xs font-semibold uppercase tracking-wide text-neutral-500";
+  "whitespace-nowrap px-3 py-2 text-xs font-semibold uppercase tracking-wide text-ink-muted";
 
 /**
  * Candidate action comparison.
@@ -33,7 +33,7 @@ export function CaseCandidatesTable({
         title="Candidate action comparison"
         headingId="case-candidates-heading"
       >
-        <p className="text-sm text-neutral-600">
+        <p className="text-sm text-ink-muted">
           No candidate actions were produced for this case.
         </p>
       </CaseSection>
@@ -53,7 +53,7 @@ export function CaseCandidatesTable({
             Candidate recovery actions ranked by the backend analysis run
           </caption>
           <thead>
-            <tr className="border-b border-neutral-200 text-left">
+            <tr className="border-b border-line text-left">
               <th scope="col" className={HEADER_CELL}>
                 Rank
               </th>
@@ -80,35 +80,35 @@ export function CaseCandidatesTable({
               return (
                 <tr
                   key={candidate.action_type}
-                  className={`border-b border-neutral-100 last:border-b-0 ${
-                    isSelected ? "bg-neutral-50" : ""
+                  className={`border-b border-line last:border-b-0 ${
+                    isSelected ? "bg-surface-hover" : ""
                   }`}
                 >
-                  <td className="px-3 py-2.5 tabular-nums text-neutral-700">
+                  <td className="px-3 py-2.5 tabular-nums text-ink">
                     {candidate.rank}
                   </td>
                   <th scope="row" className="px-3 py-2.5 text-left font-normal">
-                    <span className="font-medium text-neutral-900">
+                    <span className="font-medium text-ink">
                       {humanizeEnumLabel(candidate.action_type)}
                     </span>
                     {isSelected ? (
-                      <span className="ml-2 rounded border border-neutral-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-neutral-700">
+                      <span className="ml-2 rounded border border-line bg-surface px-1.5 py-0.5 text-[11px] font-medium text-ink">
                         Selected
                       </span>
                     ) : null}
                   </th>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-neutral-800">
+                  <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-ink">
                     {formatRate(candidate.success_probability)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-neutral-800">
+                  <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-ink">
                     {safeMoney(candidate.expected_recovered_minor, currency)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-neutral-800">
+                  <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-ink">
                     {safeMoney(candidate.expected_value_minor, currency)}
                   </td>
                   <td className="px-3 py-2.5">
                     {candidate.policy_eligible ? (
-                      <span className="text-neutral-700">
+                      <span className="text-ink">
                         Eligible
                         {candidate.requires_approval
                           ? " · requires approval"

@@ -9,7 +9,7 @@ export function CaseDetailSkeleton() {
     <div className="space-y-4" aria-busy="true">
       <span className="sr-only">Loading recovery case</span>
 
-      <div className="rounded-lg border border-neutral-200 bg-white p-5">
+      <div className="rounded-lg border border-line bg-surface p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <InlineSkeleton className="h-3 w-32" />
@@ -30,7 +30,7 @@ export function CaseDetailSkeleton() {
         {["failure", "decision", "action"].map((section) => (
           <div
             key={section}
-            className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4"
+            className="space-y-3 rounded-lg border border-line bg-surface p-4"
           >
             <InlineSkeleton className="h-4 w-32" />
             <InlineSkeleton className="h-4 w-full" />
@@ -40,7 +40,7 @@ export function CaseDetailSkeleton() {
         ))}
       </div>
 
-      <div className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
+      <div className="space-y-3 rounded-lg border border-line bg-surface p-4">
         <InlineSkeleton className="h-4 w-48" />
         {[0, 1, 2].map((row) => (
           <InlineSkeleton key={row} className="h-4 w-full" />

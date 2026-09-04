@@ -36,25 +36,25 @@ export function CaseHeader({
   isRefreshing,
 }: CaseHeaderProps) {
   return (
-    <header className="rounded-lg border border-neutral-200 bg-white p-5">
+    <header className="rounded-lg border border-line bg-surface p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <Link
             href="/recovery"
-            className="text-xs font-medium text-neutral-500 hover:text-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500"
+            className="text-xs font-medium text-ink-muted hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500"
           >
             ← Recovery Opportunities
           </Link>
-          <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-neutral-900">
+          <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-ink">
             {customer.display_name}
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <SegmentBadge segment={customer.segment} />
             <StatusBadge status={caseCore.status} />
-            <span className="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 text-[11px] font-medium text-neutral-700">
+            <span className="rounded border border-line bg-surface-hover px-1.5 py-0.5 text-[11px] font-medium text-ink">
               {humanizeEnumLabel(caseCore.case_type)}
             </span>
-            <span className="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 text-[11px] font-medium text-neutral-700">
+            <span className="rounded border border-line bg-surface-hover px-1.5 py-0.5 text-[11px] font-medium text-ink">
               Source: {humanizeEnumLabel(source.type)}
             </span>
           </div>
@@ -62,13 +62,13 @@ export function CaseHeader({
 
         <div className="flex items-start gap-6">
           <div className="text-right">
-            <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+            <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
               Amount at risk
             </p>
-            <p className="mt-1 text-3xl font-semibold tabular-nums text-neutral-900">
+            <p className="mt-1 text-3xl font-semibold tabular-nums text-ink">
               {safeMoney(caseCore.amount_at_risk_minor, caseCore.currency)}
             </p>
-            <p className="mt-1 text-xs text-neutral-500">
+            <p className="mt-1 text-xs text-ink-muted">
               Lifetime value{" "}
               <span className="tabular-nums">
                 {safeMoney(customer.lifetime_value_minor, caseCore.currency)}
@@ -80,17 +80,17 @@ export function CaseHeader({
             onClick={onRefresh}
             disabled={isRefreshing}
             aria-busy={isRefreshing}
-            className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-md border border-line bg-surface px-3 py-1.5 text-sm font-medium text-ink hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isRefreshing ? "Refreshing…" : "Refresh"}
           </button>
         </div>
       </div>
 
-      <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 border-t border-neutral-100 pt-3 text-xs">
+      <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 border-t border-line pt-3 text-xs">
         <div>
-          <dt className="inline text-neutral-500">Opened </dt>
-          <dd className="inline text-neutral-800">
+          <dt className="inline text-ink-muted">Opened </dt>
+          <dd className="inline text-ink">
             <time
               dateTime={caseCore.opened_at}
               title={formatExactTimestamp(caseCore.opened_at)}
@@ -100,8 +100,8 @@ export function CaseHeader({
           </dd>
         </div>
         <div>
-          <dt className="inline text-neutral-500">Last transition </dt>
-          <dd className="inline text-neutral-800">
+          <dt className="inline text-ink-muted">Last transition </dt>
+          <dd className="inline text-ink">
             <time
               dateTime={caseCore.last_transition_at}
               title={formatExactTimestamp(caseCore.last_transition_at)}
@@ -111,8 +111,8 @@ export function CaseHeader({
           </dd>
         </div>
         <div>
-          <dt className="inline text-neutral-500">Case version </dt>
-          <dd className="inline tabular-nums text-neutral-800">
+          <dt className="inline text-ink-muted">Case version </dt>
+          <dd className="inline tabular-nums text-ink">
             {caseCore.version}
           </dd>
         </div>
