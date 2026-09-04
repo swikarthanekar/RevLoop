@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
+  --background: #f7f7f8;
   --foreground: #171717;
 }
 
@@ -23,4 +23,24 @@ body {
 *:focus-visible {
   outline: 2px solid #737373;
   outline-offset: 2px;
+}
+
+::selection {
+  background: rgba(99, 102, 241, 0.25);
+}
+
+@layer components {
+  /* Frosted surface used across premium card treatments (light content canvas). */
+  .glass-panel {
+    @apply relative overflow-hidden rounded-2xl border border-white/60 bg-white/70 shadow-premium backdrop-blur-xl;
+  }
+
+  /* Dark glass, used inside the ink-toned shell/hero regions. */
+  .glass-panel-dark {
+    @apply relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] shadow-glass backdrop-blur-xl;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r bg-clip-text text-transparent;
+  }
 }

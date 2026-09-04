@@ -1,11 +1,25 @@
+import dynamic from "next/dynamic";
+
 import {
   ActionEffectivenessCard,
   FailureBreakdownCard,
   RecoveryTrendCard,
 } from "@/app/(app)/dashboard/dashboard-charts";
 import { DashboardKpis } from "@/app/(app)/dashboard/dashboard-kpis";
+import { RecoveryChannels } from "@/app/(app)/dashboard/recovery-channels";
 import { TopOpportunities } from "@/app/(app)/dashboard/top-opportunities";
 import type { DashboardData } from "@/app/(app)/dashboard/dashboard-types";
+import { HeroSkeleton } from "@/components/hero-flow/hero-skeleton";
+
+// The Three.js scene is client-only and non-trivial in size; it is loaded as
+// its own chunk after the rest of the dashboard has already rendered.
+const RevenueFlowHero = dynamic(
+  () =>
+    import("@/components/hero-flow/revenue-flow-hero").then(
+      (mod) => mod.RevenueFlowHero,
+    ),
+  { ssr: false, loading: () => <HeroSkeleton /> },
+);
 
 interface DashboardViewProps {
   data: DashboardData;
@@ -20,6 +34,16 @@ export function DashboardView({ data }: DashboardViewProps) {
 
   return (
     <div className="space-y-6">
+      <RevenueFlowHero
+        metrics={{
+          revenueAtRiskMinor: summary.revenue_at_risk_minor,
+          revenueRecoveredMinor: summary.revenue_recovered_minor,
+          activeCases: summary.active_cases,
+          recoveredCases: summary.recovered_cases,
+          recoveryRate: summary.recovery_rate,
+        }}
+      />
+
       <DashboardKpis summary={summary} />
 
       <RecoveryTrendCard trend={summary.recovery_trend} currency={summary.currency} />
@@ -40,6 +64,8 @@ export function DashboardView({ data }: DashboardViewProps) {
         items={topOpportunities}
         unavailable={topOpportunitiesUnavailable}
       />
+
+      <RecoveryChannels />
     </div>
   );
 }
