@@ -175,6 +175,11 @@ creation → webhook → RECOVERED) runs against real Razorpay Test Mode.
   low confidence routes to human approval instead of automation.
 - Every state transition, policy decision, and executed action is written
   to an append-only audit log, rendered as the case timeline.
+- The enforced merchant policy (auto-action limit, contact caps, cooldown,
+  minimum confidence) is not just an internal config file — it's surfaced
+  read-only on the `/compliance` page via `GET /api/v1/policies`, so the
+  same guardrails a case's `policy_reasons` cite after the fact are visible
+  as a standing view before anything happens.
 
 ## Project structure
 
