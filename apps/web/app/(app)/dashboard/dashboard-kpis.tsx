@@ -5,6 +5,7 @@ import {
   formatRate,
   safeMoney,
 } from "@/app/(app)/dashboard/dashboard-format";
+import { AnimatedMoney } from "@/components/money/animated-money";
 
 type KpiAccent = "risk" | "recovered" | "neutral";
 
@@ -16,12 +17,22 @@ const ACCENT_BAR: Record<KpiAccent, string> = {
 
 interface KpiCardProps {
   label: string;
-  value: string;
   context: string;
   accent?: KpiAccent;
+  /** Static text value. Ignored when `animatedMoney` is supplied. */
+  value?: string;
+  /** When set, the value tweens between backend-provided snapshots instead of
+   * rendering static text -- used for money figures a demo can watch move. */
+  animatedMoney?: { amountMinor: number; currency: string };
 }
 
-function KpiCard({ label, value, context, accent = "neutral" }: KpiCardProps) {
+function KpiCard({
+  label,
+  value,
+  context,
+  accent = "neutral",
+  animatedMoney,
+}: KpiCardProps) {
   return (
     <div className="relative overflow-hidden rounded-lg border border-neutral-200 bg-white p-5">
       <span
@@ -32,9 +43,17 @@ function KpiCard({ label, value, context, accent = "neutral" }: KpiCardProps) {
         {label}
       </dt>
       <dd className="mt-2">
-        <span className="block text-3xl font-semibold tabular-nums tracking-tight text-neutral-900">
-          {value}
-        </span>
+        {animatedMoney ? (
+          <AnimatedMoney
+            className="block text-3xl font-semibold tabular-nums tracking-tight text-neutral-900"
+            amountMinor={animatedMoney.amountMinor}
+            currency={animatedMoney.currency}
+          />
+        ) : (
+          <span className="block text-3xl font-semibold tabular-nums tracking-tight text-neutral-900">
+            {value}
+          </span>
+        )}
         <span className="mt-1 block text-sm text-neutral-600">{context}</span>
       </dd>
     </div>
@@ -75,13 +94,13 @@ export function DashboardKpis({ summary }: DashboardKpisProps) {
       <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           label="Revenue at Risk"
-          value={safeMoney(summary.revenue_at_risk_minor, currency)}
+          animatedMoney={{ amountMinor: summary.revenue_at_risk_minor, currency }}
           context={`${formatCount(summary.active_cases)} active cases`}
           accent="risk"
         />
         <KpiCard
           label="Recovered Revenue"
-          value={safeMoney(summary.revenue_recovered_minor, currency)}
+          animatedMoney={{ amountMinor: summary.revenue_recovered_minor, currency }}
           context={`${formatCount(summary.recovered_cases)} recovered cases`}
           accent="recovered"
         />
