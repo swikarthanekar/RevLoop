@@ -67,6 +67,17 @@ export const waitingActionFixture: LatestAction = {
   attempt_number: 1,
 };
 
+/**
+ * A payment-link action reached via approval, where the create-action
+ * response never carried the link (ApproveRecoveryActionResponse has no
+ * customer_action field). The durable source is latest_action.customer_action
+ * on a subsequent case-detail GET, which this fixture represents.
+ */
+export const approvedActionWithLinkFixture: LatestAction = {
+  ...waitingActionFixture,
+  customer_action: { type: "PAYMENT_LINK", url: "https://rzp.io/i/approvedlink" },
+};
+
 export const recoveredOutcomeFixture: CaseOutcome = {
   outcome: "RECOVERED_BY_ACTION",
   recovered_amount_minor: 499900,

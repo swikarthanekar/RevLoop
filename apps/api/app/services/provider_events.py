@@ -13,11 +13,11 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.domain.enums import (
+    PAYMENT_LINK_MECHANISM_ACTIONS,
     AuditActorType,
     CaseType,
     FailureCategory,
     RecoveryActionStatus,
-    RecoveryActionType,
     RecoveryCaseStatus,
     RecoveryOutcomeType,
     VerificationSource,
@@ -606,11 +606,20 @@ class ProviderEventService:
         organization_id: UUID,
         provider_reference: str,
     ) -> RecoveryAction | None:
+        # The action may be labeled CREATE_PAYMENT_LINK or any other
+        # PAYMENT_LINK_MECHANISM_ACTIONS member (e.g.
+        # REQUEST_ALTERNATE_PAYMENT_METHOD) -- both create the Payment Link
+        # this webhook confirms was paid, and RecoveryAction.action_type is
+        # never rewritten to CREATE_PAYMENT_LINK. Matching only the literal
+        # value here would mean payment_link.paid could never resolve such a
+        # case, leaving genuinely recovered revenue stuck WAITING_FOR_OUTCOME.
         return self._session.execute(
             select(RecoveryAction).where(
                 RecoveryAction.organization_id == organization_id,
                 RecoveryAction.provider_reference == provider_reference,
-                RecoveryAction.action_type == RecoveryActionType.CREATE_PAYMENT_LINK.value,
+                RecoveryAction.action_type.in_(
+                    tuple(action.value for action in PAYMENT_LINK_MECHANISM_ACTIONS)
+                ),
             )
         ).scalar_one_or_none()
 

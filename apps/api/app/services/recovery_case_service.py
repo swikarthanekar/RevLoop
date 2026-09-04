@@ -8,7 +8,8 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.core.errors import ForbiddenError, NotFoundError
-from app.domain.enums import CaseType
+from app.domain.enums import PAYMENT_LINK_MECHANISM_ACTIONS, CaseType, RecoveryActionType
+from app.models.recovery_action import RecoveryAction
 from app.models.recovery_recommendation import RecoveryRecommendation
 from app.repositories.recovery_case_repo import (
     RecoveryCaseListFilters,
@@ -16,6 +17,7 @@ from app.repositories.recovery_case_repo import (
     RecoveryCaseRepository,
 )
 from app.schemas.common import RecoveryCaseSort
+from app.schemas.recovery_actions import CustomerActionResponse
 from app.schemas.recovery_case import (
     CaseAnalysis,
     CaseCore,
@@ -284,7 +286,16 @@ class RecoveryCaseService:
             executed_at=action.executed_at,
             provider_reference=action.provider_reference,
             provider_status=action.provider_status,
+            customer_action=self._build_customer_action(action),
         )
+
+    def _build_customer_action(self, action: RecoveryAction) -> CustomerActionResponse | None:
+        if RecoveryActionType(action.action_type) not in PAYMENT_LINK_MECHANISM_ACTIONS:
+            return None
+        short_url = action.metadata_.get("short_url")
+        if not short_url:
+            return None
+        return CustomerActionResponse(type="PAYMENT_LINK", url=str(short_url))
 
     def _build_outcome(self, case_id: UUID, organization_id: UUID) -> CaseOutcome | None:
         outcome = self._repo.get_outcome(case_id, organization_id)

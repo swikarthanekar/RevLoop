@@ -560,6 +560,7 @@ export interface components {
             action_type: string;
             /** Attempt Number */
             attempt_number: number;
+            customer_action?: components["schemas"]["CustomerActionResponse"] | null;
             /** Executed At */
             executed_at: string | null;
             /**

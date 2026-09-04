@@ -28,6 +28,7 @@ from app.actions.keys import (
 from app.actions.repository import RecoveryActionRepository
 from app.core.config import Settings
 from app.domain.enums import (
+    PAYMENT_LINK_MECHANISM_ACTIONS,
     AuditActorType,
     RecoveryActionStatus,
     RecoveryActionType,
@@ -70,8 +71,8 @@ TERMINAL_STATUSES = frozenset(
     }
 )
 PROMPT16_EXECUTABLE = frozenset(
-    {RecoveryActionType.WAIT, RecoveryActionType.STOP, RecoveryActionType.CREATE_PAYMENT_LINK}
-)
+    {RecoveryActionType.WAIT, RecoveryActionType.STOP}
+) | PAYMENT_LINK_MECHANISM_ACTIONS
 IN_FLIGHT_STATUSES = frozenset(
     {
         RecoveryActionStatus.PENDING_APPROVAL.value,
@@ -167,7 +168,7 @@ class RecoveryActionService:
         )
         if existing is not None:
             refreshed_case = self._reload_case(case.id, organization_id)
-            if existing.action_type == RecoveryActionType.CREATE_PAYMENT_LINK.value:
+            if RecoveryActionType(existing.action_type) in PAYMENT_LINK_MECHANISM_ACTIONS:
                 self._maybe_reconcile_payment_link_action(existing, refreshed_case)
                 self._session.refresh(existing)
             return self._to_payload(existing, self._reload_case(case.id, organization_id))
@@ -180,7 +181,7 @@ class RecoveryActionService:
         blocking = self._repo.get_blocking_payment_link_action(
             case_id=case.id, organization_id=organization_id
         )
-        if blocking is not None and action_type == RecoveryActionType.CREATE_PAYMENT_LINK:
+        if blocking is not None and action_type in PAYMENT_LINK_MECHANISM_ACTIONS:
             raise ActionConflictError("Unresolved payment link action blocks new link creation.")
         try:
             if action_type == RecoveryActionType.STOP:
@@ -269,7 +270,7 @@ class RecoveryActionService:
             ),
         )
         case = self._reload_case(case.id, organization_id)
-        if action.action_type == RecoveryActionType.CREATE_PAYMENT_LINK.value:
+        if RecoveryActionType(action.action_type) in PAYMENT_LINK_MECHANISM_ACTIONS:
             self._invoke_payment_link_provider(action, case)
             case = self._reload_case(case.id, organization_id)
         return ApproveActionResult(
@@ -420,7 +421,7 @@ class RecoveryActionService:
             idempotency_key=idempotency_key,
             requires_approval=True,
         )
-        if action.action_type == RecoveryActionType.CREATE_PAYMENT_LINK.value:
+        if RecoveryActionType(action.action_type) in PAYMENT_LINK_MECHANISM_ACTIONS:
             action.provider_reference = build_payment_link_reference_id(action.id)
             action.request_fingerprint = build_request_fingerprint(
                 amount_minor=case.amount_at_risk_minor,
@@ -459,7 +460,12 @@ class RecoveryActionService:
         action = self._create_action_row(
             case=case,
             recommendation=recommendation,
-            action_type=RecoveryActionType.CREATE_PAYMENT_LINK,
+            # Preserve the true recommended action type (e.g.
+            # REQUEST_ALTERNATE_PAYMENT_METHOD) rather than relabeling it as
+            # CREATE_PAYMENT_LINK -- every consumer of RecoveryAction.action_type
+            # that cares whether the payment-link mechanism was used checks
+            # membership in PAYMENT_LINK_MECHANISM_ACTIONS, not this literal value.
+            action_type=RecoveryActionType(recommendation.action_type),
             status=RecoveryActionStatus.EXECUTING,
             attempt_number=attempt_number,
             idempotency_key=idempotency_key,
@@ -580,7 +586,7 @@ class RecoveryActionService:
         action: RecoveryAction,
         case: RecoveryCase,
     ) -> None:
-        if action.action_type != RecoveryActionType.CREATE_PAYMENT_LINK.value:
+        if RecoveryActionType(action.action_type) not in PAYMENT_LINK_MECHANISM_ACTIONS:
             return
         if action.provider_reference is None:
             return
@@ -861,7 +867,11 @@ class RecoveryActionService:
             organization_id=case.organization_id,
         )
         if blocking is not None:
-            in_flight.add(RecoveryActionType.CREATE_PAYMENT_LINK)
+            # Any payment-link-mechanism action in flight blocks every other
+            # candidate that shares the mechanism, regardless of which one is
+            # actually blocking -- they would collide on the same Payment Link
+            # creation call for this case.
+            in_flight |= PAYMENT_LINK_MECHANISM_ACTIONS
         return PolicyEvaluationContext(
             action_type=RecoveryActionType(recommendation.action_type),
             amount_at_risk_minor=case.amount_at_risk_minor,
@@ -907,7 +917,7 @@ class RecoveryActionService:
     ) -> ActionResponsePayload:
         customer_action_type = None
         customer_action_url = None
-        if action.action_type == RecoveryActionType.CREATE_PAYMENT_LINK.value:
+        if RecoveryActionType(action.action_type) in PAYMENT_LINK_MECHANISM_ACTIONS:
             short_url = action.metadata_.get("short_url")
             if short_url:
                 customer_action_type = "PAYMENT_LINK"

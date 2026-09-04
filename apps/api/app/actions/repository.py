@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.domain.enums import RecoveryActionStatus, RecoveryActionType
+from app.domain.enums import PAYMENT_LINK_MECHANISM_ACTIONS, RecoveryActionStatus
 from app.models.recovery_action import RecoveryAction
 from app.models.recovery_case import RecoveryCase
 
@@ -60,12 +60,17 @@ class RecoveryActionRepository:
         case_id: UUID,
         organization_id: UUID,
     ) -> RecoveryAction | None:
+        # Any payment-link-mechanism action (see PAYMENT_LINK_MECHANISM_ACTIONS),
+        # not just one literally labeled CREATE_PAYMENT_LINK -- they all create
+        # the same kind of Razorpay Payment Link and must not run concurrently.
         return self._session.execute(
             select(RecoveryAction)
             .where(
                 RecoveryAction.case_id == case_id,
                 RecoveryAction.organization_id == organization_id,
-                RecoveryAction.action_type == RecoveryActionType.CREATE_PAYMENT_LINK.value,
+                RecoveryAction.action_type.in_(
+                    tuple(action.value for action in PAYMENT_LINK_MECHANISM_ACTIONS)
+                ),
                 RecoveryAction.status.in_(tuple(BLOCKING_ACTION_STATUSES)),
             )
             .order_by(RecoveryAction.created_at.desc())

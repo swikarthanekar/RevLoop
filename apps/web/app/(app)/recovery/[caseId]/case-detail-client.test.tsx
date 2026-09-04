@@ -24,10 +24,12 @@ import {
   ACTION_ID,
   ANALYSIS_RUN_ID,
   CASE_ID,
+  approvedActionWithLinkFixture,
   awaitingApprovalCaseFixture,
   detectedCaseFixture,
   executingCaseFixture,
   failedCaseFixture,
+  makeCase,
   recommendedCaseFixture,
   recoveredCaseFixture,
   scheduledCaseFixture,
@@ -556,6 +558,46 @@ describe("CaseDetailClient — mutations", () => {
       expected_case_version: 4,
     });
     expect(postCalls(calls, "/approve")[0].url).toContain(ACTION_ID);
+  });
+
+  it("shows the payment link after approval, even though the approve response never carries it", async () => {
+    // ApproveRecoveryActionResponse has no customer_action field -- the link
+    // can only reach the UI through a case-detail refetch. This proves the
+    // panel picks it up from latest_action.customer_action after the
+    // post-approve refetch, not just from the immediate-execute response.
+    const { client, calls } = buildClient((call) => {
+      if (call.method === "POST") {
+        return {
+          status: 200,
+          body: {
+            action_id: ACTION_ID,
+            action_status: "SUCCEEDED",
+            case_status: "WAITING_FOR_OUTCOME",
+          },
+        };
+      }
+      const approved = calls.some((c) => c.method === "POST");
+      return {
+        status: 200,
+        body: approved
+          ? makeCase({
+              status: "WAITING_FOR_OUTCOME",
+              latestAction: approvedActionWithLinkFixture,
+            })
+          : awaitingApprovalCaseFixture,
+      };
+    });
+    renderCase(client);
+    await findCaseHeading();
+
+    expect(
+      screen.queryByText("https://rzp.io/i/approvedlink"),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Approve action" }));
+
+    const link = await screen.findByText("https://rzp.io/i/approvedlink");
+    expect(link).toHaveAttribute("href", "https://rzp.io/i/approvedlink");
   });
 
   it("submits reject with the operator reason and reanalyze flag", async () => {

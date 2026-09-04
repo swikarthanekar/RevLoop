@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.schemas.common import PaginatedResponse
+from app.schemas.recovery_actions import CustomerActionResponse
 
 
 class CustomerSummary(BaseModel):
@@ -117,6 +118,13 @@ class LatestAction(BaseModel):
     executed_at: datetime | None
     provider_reference: str | None
     provider_status: str | None
+    # Durable surface for a successfully created Payment Link. The
+    # create-action response (CreateRecoveryActionResponse.customer_action)
+    # only exists for the immediate, non-approval execution path; an action
+    # that went through approve_action never returned it at all, so an
+    # operator approving a high-value case never saw the link. This field is
+    # populated the same way for both paths and survives a page reload.
+    customer_action: CustomerActionResponse | None = None
 
 
 class CaseOutcome(BaseModel):

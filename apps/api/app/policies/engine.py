@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.domain.enums import RecoveryActionType
+from app.domain.enums import PAYMENT_LINK_MECHANISM_ACTIONS, RecoveryActionType
 from app.policies.reason_codes import (
     HARD_BLOCK_REASON_CODES,
     PolicyReasonCode,
@@ -135,7 +135,7 @@ def _evaluate_intervention_policy(
         reasons.append(PolicyReasonCode.EQUIVALENT_ACTION_IN_FLIGHT)
 
     if (
-        action == RecoveryActionType.CREATE_PAYMENT_LINK
+        action in PAYMENT_LINK_MECHANISM_ACTIONS
         and not context.payment_link_data_sufficient
     ):
         reasons.append(PolicyReasonCode.PAYMENT_LINK_DATA_INSUFFICIENT)

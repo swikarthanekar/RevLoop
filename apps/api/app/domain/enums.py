@@ -30,6 +30,22 @@ class RecoveryActionType(str, Enum):
     STOP = "STOP"
 
 
+#: Candidate action types whose only implemented delivery mechanism in P0 is a
+#: Razorpay Standard Payment Link. A Payment Link's checkout page lets the
+#: customer choose whichever payment method is available, which is
+#: mechanically what REQUEST_ALTERNATE_PAYMENT_METHOD asks for -- there is no
+#: separate "alternate method" provider call. Every place that gates Payment
+#: Link creation, approval, idempotent reconciliation, or the
+#: `payment_link.paid` webhook lookup must treat every member of this set the
+#: same way, keyed on the RecoveryAction's own (never rewritten) action_type.
+PAYMENT_LINK_MECHANISM_ACTIONS = frozenset(
+    {
+        RecoveryActionType.CREATE_PAYMENT_LINK,
+        RecoveryActionType.REQUEST_ALTERNATE_PAYMENT_METHOD,
+    }
+)
+
+
 class RecoveryActionStatus(str, Enum):
     PENDING_APPROVAL = "PENDING_APPROVAL"
     SCHEDULED = "SCHEDULED"

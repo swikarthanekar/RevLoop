@@ -8,6 +8,7 @@ pytest_plugins = ["tests.recovery.conftest"]
 import threading
 import uuid
 from collections.abc import Generator
+from decimal import Decimal
 from typing import Any
 from urllib.parse import parse_qs, unquote
 
@@ -629,6 +630,215 @@ def test_payment_link_paid_cross_milestone(
         select(func.count()).select_from(RecoveryOutcome).where(RecoveryOutcome.case_id == case.id)
     ).scalar_one() == 1
     webhook_app.dependency_overrides.clear()
+
+
+def test_request_alternate_payment_method_executes_immediately(
+    action_client, db_session
+) -> None:
+    """REQUEST_ALTERNATE_PAYMENT_METHOD is executable (Prompt 27 hardening):
+    it shares CREATE_PAYMENT_LINK's Payment Link mechanism (a Standard
+    Payment Link's checkout page already lets the customer pick any
+    available method), but its own action_type label must be preserved end
+    to end -- not silently rewritten -- so the recommendation and the
+    resulting action stay consistent everywhere that reads them."""
+    client, transport = action_client
+    case, run_id, _ = setup_recommended_case(
+        db_session, action_type=RecoveryActionType.REQUEST_ALTERNATE_PAYMENT_METHOD
+    )
+    response = _execute_action(
+        client, case.id, run_id, action_type=RecoveryActionType.REQUEST_ALTERNATE_PAYMENT_METHOD
+    )
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["case_status"] == RecoveryCaseStatus.WAITING_FOR_OUTCOME.value
+    assert payload["action"]["status"] == RecoveryActionStatus.SUCCEEDED.value
+    assert (
+        payload["action"]["action_type"]
+        == RecoveryActionType.REQUEST_ALTERNATE_PAYMENT_METHOD.value
+    )
+    assert payload["action"]["provider_reference"].startswith("rl_")
+    assert payload["customer_action"]["type"] == "PAYMENT_LINK"
+    assert transport.post_count == 1
+
+
+def test_request_alternate_payment_method_requires_approval_then_executes(
+    action_client, db_session
+) -> None:
+    client, transport = action_client
+    case, run_id, _ = setup_recommended_case(
+        db_session,
+        action_type=RecoveryActionType.REQUEST_ALTERNATE_PAYMENT_METHOD,
+        amount_at_risk_minor=2_000_000,
+    )
+    create = _execute_action(
+        client, case.id, run_id, action_type=RecoveryActionType.REQUEST_ALTERNATE_PAYMENT_METHOD
+    )
+    assert create.status_code == 201
+    payload = create.json()
+    assert payload["case_status"] == RecoveryCaseStatus.AWAITING_APPROVAL.value
+    assert payload["action"]["status"] == RecoveryActionStatus.PENDING_APPROVAL.value
+    assert payload["customer_action"] is None
+    assert transport.post_count == 0
+
+    action_id = payload["action"]["id"]
+    db_session.expire_all()
+    case_row = db_session.execute(
+        select(RecoveryCase).where(RecoveryCase.id == case.id)
+    ).scalar_one()
+    approve = client.post(
+        f"/api/v1/recovery-actions/{action_id}/approve",
+        headers=ADMIN_HEADERS,
+        json={"expected_case_version": case_row.version},
+    )
+    assert approve.status_code == 200
+    assert approve.json()["case_status"] == RecoveryCaseStatus.WAITING_FOR_OUTCOME.value
+    assert transport.post_count == 1
+
+
+def test_approved_payment_link_url_visible_on_case_detail(
+    action_client, db_session
+) -> None:
+    """Before this fix, a Payment Link created via approve_action (the
+    high-value / requires-approval path) was never returned anywhere the
+    frontend could read: CreateRecoveryActionResponse.customer_action is
+    only populated on the immediate-execute response, and
+    ApproveRecoveryActionResponse never carried it at all. An operator who
+    approved a high-value case had no way to see the link through the app.
+    GET case detail's latest_action.customer_action must carry it, since the
+    frontend already refetches case detail after every mutation."""
+    client, transport = action_client
+    case, run_id, _ = setup_recommended_case(db_session, amount_at_risk_minor=2_000_000)
+    create = _execute_action(client, case.id, run_id)
+    action_id = create.json()["action"]["id"]
+
+    detail_before_approval = client.get(
+        f"/api/v1/recovery-cases/{case.id}", headers=OPERATOR_HEADERS
+    )
+    assert detail_before_approval.status_code == 200
+    assert detail_before_approval.json()["latest_action"]["customer_action"] is None
+
+    db_session.expire_all()
+    case_row = db_session.execute(
+        select(RecoveryCase).where(RecoveryCase.id == case.id)
+    ).scalar_one()
+    approve = client.post(
+        f"/api/v1/recovery-actions/{action_id}/approve",
+        headers=ADMIN_HEADERS,
+        json={"expected_case_version": case_row.version},
+    )
+    assert approve.status_code == 200
+    assert transport.post_count == 1
+
+    detail_after_approval = client.get(
+        f"/api/v1/recovery-cases/{case.id}", headers=OPERATOR_HEADERS
+    )
+    assert detail_after_approval.status_code == 200
+    customer_action = detail_after_approval.json()["latest_action"]["customer_action"]
+    assert customer_action == {"type": "PAYMENT_LINK", "url": "https://rzp.io/i/testlink"}
+
+
+def test_request_alternate_payment_method_payment_link_paid_resolves_case(
+    action_client,
+    db_session,
+    action_settings,
+    action_seeded_database,
+) -> None:
+    """The payment_link.paid webhook must resolve an action recorded under
+    REQUEST_ALTERNATE_PAYMENT_METHOD, not only CREATE_PAYMENT_LINK -- before
+    this fix, RecoveryAction.action_type was never rewritten but the webhook
+    lookup only matched the literal CREATE_PAYMENT_LINK value, so a genuinely
+    recovered payment would have stayed WAITING_FOR_OUTCOME forever."""
+    client, transport = action_client
+    case, run_id, _ = setup_recommended_case(
+        db_session, action_type=RecoveryActionType.REQUEST_ALTERNATE_PAYMENT_METHOD
+    )
+    create = _execute_action(
+        client, case.id, run_id, action_type=RecoveryActionType.REQUEST_ALTERNATE_PAYMENT_METHOD
+    )
+    assert create.status_code == 201
+    reference = create.json()["action"]["provider_reference"]
+    assert reference == transport.last_reference
+
+    _fire_payment_link_paid_webhook(
+        action_settings=action_settings,
+        action_seeded_database=action_seeded_database,
+        reference=reference,
+        amount=case.amount_at_risk_minor,
+        event_id="evt_alt_method_paid",
+    )
+    db_session.expire_all()
+    refreshed = db_session.execute(
+        select(RecoveryCase).where(RecoveryCase.id == case.id)
+    ).scalar_one()
+    assert refreshed.status == RecoveryCaseStatus.RECOVERED.value
+    assert db_session.execute(
+        select(func.count()).select_from(RecoveryOutcome).where(RecoveryOutcome.case_id == case.id)
+    ).scalar_one() == 1
+
+
+def test_payment_link_mechanism_actions_block_each_other(action_client, db_session) -> None:
+    """A REQUEST_ALTERNATE_PAYMENT_METHOD action in flight must block a
+    CREATE_PAYMENT_LINK attempt for the same case, and vice versa: both use
+    the identical Payment Link creation call and must not run concurrently.
+
+    Reproduces the realistic shape of this scenario: an earlier payment-link
+    action is still PENDING_APPROVAL (e.g. left un-reconciled) while the case
+    has separately been brought back to RECOMMENDED for a new attempt -- not
+    a second click while still AWAITING_APPROVAL, which _ensure_case_actionable
+    already rejects earlier and independently of this check."""
+    client, transport = action_client
+    case, run_id_a, _ = setup_recommended_case(
+        db_session,
+        action_type=RecoveryActionType.REQUEST_ALTERNATE_PAYMENT_METHOD,
+        amount_at_risk_minor=2_000_000,
+    )
+    first = _execute_action(
+        client, case.id, run_id_a, action_type=RecoveryActionType.REQUEST_ALTERNATE_PAYMENT_METHOD
+    )
+    assert first.status_code == 201
+    assert first.json()["case_status"] == RecoveryCaseStatus.AWAITING_APPROVAL.value
+
+    run_id_b = uuid.uuid4()
+    db_session.expire_all()
+    case_row = db_session.execute(
+        select(RecoveryCase).where(RecoveryCase.id == case.id)
+    ).scalar_one()
+    case_row.status = RecoveryCaseStatus.RECOMMENDED.value
+    case_row.current_analysis_run_id = run_id_b
+    db_session.add(
+        RecoveryRecommendation(
+            organization_id=case_row.organization_id,
+            case_id=case_row.id,
+            analysis_run_id=run_id_b,
+            action_type=RecoveryActionType.CREATE_PAYMENT_LINK.value,
+            rank=1,
+            success_probability=Decimal("0.720000"),
+            expected_recovered_minor=case_row.amount_at_risk_minor,
+            expected_value_minor=350000,
+            confidence=Decimal("0.810000"),
+            policy_eligible=True,
+            requires_approval=False,
+            policy_reasons=[],
+            factors=[],
+            model_version="test-model",
+            feature_schema_version="recovery_features_v1",
+        )
+    )
+    db_session.commit()
+
+    second = _execute_action(
+        client, case.id, run_id_b, action_type=RecoveryActionType.CREATE_PAYMENT_LINK
+    )
+    # Caught by the policy layer's EQUIVALENT_ACTION_IN_FLIGHT check first
+    # (_build_policy_context also treats every PAYMENT_LINK_MECHANISM_ACTIONS
+    # member as in flight while one is blocking); the harder ActionConflictError
+    # a few lines later in create_case_action is defense-in-depth for a path
+    # this policy check doesn't cover.
+    assert second.status_code == 422
+    body = second.json()
+    assert body["error"]["code"] == "ACTION_BLOCKED_BY_POLICY"
+    assert "EQUIVALENT_ACTION_IN_FLIGHT" in body["error"]["details"]["reasons"]
+    assert transport.post_count == 0
 
 
 def test_reject_reanalyze_immediate_rerank(action_client, db_session) -> None:

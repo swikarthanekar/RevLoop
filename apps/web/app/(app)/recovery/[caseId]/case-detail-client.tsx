@@ -182,6 +182,11 @@ export function CaseDetailClient({ caseId, apiClient }: CaseDetailClientProps) {
     currentUserRole(),
   );
   const terminal = isTerminalStatus(caseCore.status);
+  // latest_action.customer_action is the durable source (survives a reload
+  // and covers the approve path, which never returned a link at all); the
+  // one-shot mutation response is a same-tick fallback for the instant after
+  // an immediate execute, before the refetch it triggers has landed.
+  const resolvedCustomerAction = latest_action?.customer_action ?? customerAction;
 
   return (
     <div className="space-y-4">
@@ -215,7 +220,7 @@ export function CaseDetailClient({ caseId, apiClient }: CaseDetailClientProps) {
             selectedCandidate={selectedCandidate}
             controls={controls}
             mutation={mutation}
-            customerAction={customerAction}
+            customerAction={resolvedCustomerAction}
             hasAnalysis={analysis !== null}
             onAnalyze={() => void analyze()}
             onExecute={handleExecute}
