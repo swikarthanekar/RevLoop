@@ -72,6 +72,20 @@ def test_a_trailing_slash_in_configuration_still_matches_the_browser_origin(
     assert response.headers["access-control-allow-origin"] == ALLOWED_ORIGIN
 
 
+def test_an_https_deployment_origin_is_allowed(build_client) -> None:
+    """The deployed frontend is an https origin on a hosting domain."""
+    origin = "https://revloop-example.vercel.app"
+    response = build_client(origin).get("/health", headers={"Origin": origin})
+
+    assert response.headers["access-control-allow-origin"] == origin
+
+
+def test_no_wildcard_origin_is_ever_advertised(build_client) -> None:
+    response = build_client().get("/health", headers={"Origin": ALLOWED_ORIGIN})
+
+    assert response.headers.get("access-control-allow-origin") != "*"
+
+
 def test_foreign_origin_is_not_granted_access(build_client) -> None:
     response = build_client().get("/health", headers={"Origin": FOREIGN_ORIGIN})
 

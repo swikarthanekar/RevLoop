@@ -1,0 +1,41 @@
+# The build context is the repository root, so exclude everything the backend
+# image does not copy. Note that scripts/ml and apps/api/app/ml/artifacts are
+# runtime dependencies and must never be excluded here.
+
+.git/
+.github/
+.cursor/
+
+# Local virtualenvs and caches must never become build inputs; the image
+# installs dependencies from requirements.txt into a clean interpreter.
+apps/api/.venv/
+.venv/
+venv/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.ruff_cache/
+**/.mypy_cache/
+
+# Not part of the backend runtime.
+apps/api/tests/
+apps/api/pyproject.toml
+apps/api/requirements-dev.txt
+apps/web/
+data/
+docs/
+infra/
+scripts/seed_demo.py
+
+# Frontend and browser-test output.
+**/node_modules/
+**/.next/
+**/playwright-report/
+**/test-results/
+
+# Secrets and local state.
+**/.env
+**/.env.*
+*.log
+*.sqlite
+*.db

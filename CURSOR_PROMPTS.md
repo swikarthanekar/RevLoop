@@ -5,6 +5,7 @@ These prompts are intentionally milestone-scoped. Use them in order. Do not ask 
 ## How to use
 
 Before each prompt:
+
 1. commit or checkpoint the previous green milestone;
 2. ensure authoritative docs are in the repository root;
 3. paste only the next prompt into Cursor Agent;
@@ -14,6 +15,8 @@ Before each prompt:
 Each prompt assumes paths from `ARCHITECTURE.md` and `IMPLEMENTATION_PLAN.md`. If initialization generates slightly different framework boilerplate paths, adapt only path names—not architectural ownership.
 
 ---
+
+
 
 # Prompt 01 — Repository Initialization
 
@@ -72,6 +75,8 @@ Stop after this milestone.
 
 ---
 
+
+
 # Prompt 02 — Backend Skeleton
 
 ```text
@@ -120,6 +125,8 @@ Report files changed, test commands/results, and stop.
 
 ---
 
+
+
 # Prompt 03 — Database Models
 
 ```text
@@ -165,6 +172,8 @@ Run backend tests + Ruff. Fix related failures. Stop after reporting changes and
 
 ---
 
+
+
 # Prompt 04 — Alembic Migrations
 
 ```text
@@ -203,6 +212,8 @@ Run backend tests + Ruff. Report migration revisions, checks, and stop.
 ```
 
 ---
+
+
 
 # Prompt 05 — Demo Seed Generator
 
@@ -251,6 +262,8 @@ Run relevant tests + Ruff. Report aggregate seed counts and stop.
 
 ---
 
+
+
 # Prompt 06 — Read APIs
 
 ```text
@@ -296,6 +309,8 @@ Run pytest + Ruff. Stop after report.
 
 ---
 
+
+
 # Prompt 07 — Recovery State Machine
 
 ```text
@@ -340,6 +355,8 @@ Run all backend tests + Ruff. Stop after report.
 
 ---
 
+
+
 # Prompt 08 — Failure Classification + Feature Builder
 
 ```text
@@ -379,6 +396,8 @@ Run tests + Ruff and stop.
 ```
 
 ---
+
+
 
 # Prompt 09 — ERV, Candidate Generation, Confidence, Policy
 
@@ -426,6 +445,8 @@ Run backend tests + Ruff and stop.
 
 ---
 
+
+
 # Prompt 10 — Synthetic ML Dataset
 
 ```text
@@ -461,6 +482,8 @@ Run generator in a small test mode plus pytest/Ruff. Report produced row counts/
 ```
 
 ---
+
+
 
 # Prompt 11 — Logistic Regression Baseline
 
@@ -504,6 +527,8 @@ Run training once, report held-out metrics honestly, run tests/Ruff, stop.
 
 ---
 
+
+
 # Prompt 12 — XGBoost Evaluation and Selection
 
 ```text
@@ -535,6 +560,8 @@ Report both metric sets, selection reason, files changed, checks, and stop.
 ```
 
 ---
+
+
 
 # Prompt 13 — Runtime Model Service + Analyze API
 
@@ -585,6 +612,8 @@ Run all backend checks and stop.
 
 ---
 
+
+
 # Prompt 14 — Razorpay Webhook Receiver
 
 ```text
@@ -627,6 +656,8 @@ Run backend tests/Ruff and stop.
 
 ---
 
+
+
 # Prompt 15 — Razorpay Payment/Downtime Reads
 
 ```text
@@ -665,6 +696,8 @@ Run checks and stop.
 ```
 
 ---
+
+
 
 # Prompt 16 — Policy-safe Recovery Actions + Payment Link
 
@@ -719,6 +752,8 @@ Run checks and stop.
 
 ---
 
+
+
 # Prompt 17 — LLM Explanation Service
 
 ```text
@@ -762,6 +797,8 @@ Run backend checks and stop.
 
 ---
 
+
+
 # Prompt 18 — Frontend Shell + API Client
 
 ```text
@@ -804,6 +841,8 @@ Stop after report.
 
 ---
 
+
+
 # Prompt 19 — Executive Dashboard
 
 ```text
@@ -842,6 +881,8 @@ Run frontend lint/typecheck/unit tests and production build. Stop after report.
 
 ---
 
+
+
 # Prompt 20 — Recovery Opportunities Page
 
 ```text
@@ -870,6 +911,8 @@ Run frontend checks/build and stop.
 ```
 
 ---
+
+
 
 # Prompt 21 — Recovery Case Detail
 
@@ -903,6 +946,8 @@ Run frontend checks/build and stop.
 
 ---
 
+
+
 # Prompt 22 — Agent / Audit Timeline
 
 ```text
@@ -930,6 +975,8 @@ Run frontend checks/build and stop.
 ```
 
 ---
+
+
 
 # Prompt 23 — Demo Batch + Reset
 
@@ -964,6 +1011,8 @@ Run backend and affected frontend checks, stop.
 ```
 
 ---
+
+
 
 # Prompt 24 — Full Integration Review
 
@@ -1000,6 +1049,8 @@ Run full backend and frontend checks. Do not proceed to E2E until green. Report 
 
 ---
 
+
+
 # Prompt 25 — End-to-End Tests
 
 ```text
@@ -1034,6 +1085,8 @@ Run full backend tests/Ruff, frontend lint/typecheck/unit tests, Playwright, and
 ```
 
 ---
+
+
 
 # Prompt 26 — Razorpay Test-Mode Smoke and Deployment Hardening
 
@@ -1075,6 +1128,8 @@ Run all automated tests after deployment-related edits. Report exact real integr
 
 ---
 
+
+
 # Prompt 27 — Final Architecture and Safety Review
 
 ```text
@@ -1107,3 +1162,4 @@ Return:
 3. full pass/fail checks;
 4. any remaining known limitation that should be disclosed in README/demo.
 ```
+
