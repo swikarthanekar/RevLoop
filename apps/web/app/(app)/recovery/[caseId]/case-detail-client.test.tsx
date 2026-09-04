@@ -114,6 +114,25 @@ const renderCase = (client: ApiClient) =>
 const findCaseHeading = () =>
   screen.findByRole("heading", { name: "Acme Learning", level: 1 });
 
+// This file asserts state-driven control availability (RECOMMENDED shows
+// Execute, AWAITING_APPROVAL shows Approve/Reject, etc.), not role gating —
+// that's covered separately by case-presentation.test.ts and role.test.ts.
+// Fix the role to ADMIN (permitted to execute and approve) so those
+// assertions keep testing state, not an incidental default role.
+const ORIGINAL_DEV_AUTH_TOKEN = process.env.NEXT_PUBLIC_DEV_AUTH_TOKEN;
+
+beforeEach(() => {
+  process.env.NEXT_PUBLIC_DEV_AUTH_TOKEN = "dev-admin";
+});
+
+afterEach(() => {
+  if (ORIGINAL_DEV_AUTH_TOKEN === undefined) {
+    delete process.env.NEXT_PUBLIC_DEV_AUTH_TOKEN;
+  } else {
+    process.env.NEXT_PUBLIC_DEV_AUTH_TOKEN = ORIGINAL_DEV_AUTH_TOKEN;
+  }
+});
+
 describe("CaseDetailClient — loading, success, not found", () => {
   it("shows a header and section skeleton while loading", () => {
     const { client } = readOnlyClient(recommendedCaseFixture);
@@ -273,6 +292,37 @@ describe("CaseDetailClient — state-aware controls", () => {
     expect(
       screen.queryByRole("button", { name: "Execute recovery" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("hides Execute for an ANALYST and explains why instead of hiding silently", async () => {
+    process.env.NEXT_PUBLIC_DEV_AUTH_TOKEN = "dev-analyst";
+    const { client } = readOnlyClient(recommendedCaseFixture);
+    renderCase(client);
+    await findCaseHeading();
+
+    expect(
+      screen.queryByRole("button", { name: "Execute recovery" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/your role cannot execute recovery actions/),
+    ).toBeInTheDocument();
+  });
+
+  it("offers Execute for an OPERATOR, who cannot approve/reject", async () => {
+    process.env.NEXT_PUBLIC_DEV_AUTH_TOKEN = "dev-operator";
+    const { client } = readOnlyClient(awaitingApprovalCaseFixture);
+    renderCase(client);
+    await findCaseHeading();
+
+    expect(
+      screen.queryByRole("button", { name: "Approve action" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Reject action" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Only an admin can approve or reject this action/),
+    ).toBeInTheDocument();
   });
 
   it("requires a rejection reason before Reject is enabled", async () => {

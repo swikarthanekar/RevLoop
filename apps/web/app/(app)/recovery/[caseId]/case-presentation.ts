@@ -1,17 +1,24 @@
 import { ApiError } from "@/lib/api/api-error";
 import {
+  canApproveActions,
+  canExecuteActions,
+  type UserRole,
+} from "@/lib/auth/role";
+import {
   isTerminalStatus,
   type LatestAction,
 } from "@/app/(app)/recovery/[caseId]/case-types";
 
 /**
- * Which controls this view offers for a given backend status.
+ * Which controls this view offers for a given backend status and role.
  *
  * IMPORTANT: this is presentation only. It exists so the UI does not show a
- * control that STATE_MACHINE.md documents as impossible, which would mislead
- * the operator. It is NOT an authorization or eligibility decision:
+ * control that STATE_MACHINE.md documents as impossible, or that the
+ * backend's role check (FRONTEND_SPEC.md section 6.E) will always reject for
+ * the current user. It is NOT an authorization or eligibility decision:
  *
- *  - the backend re-validates every mutation and its rejection always wins;
+ *  - the backend re-validates every mutation, role included, and its
+ *    rejection always wins;
  *  - nothing here computes policy eligibility, ERV, probability or approval
  *    requirement — those are read verbatim from the analysis payload;
  *  - a control being visible never implies the server will permit it.
@@ -22,6 +29,10 @@ export interface CaseControls {
   canApprove: boolean;
   canReject: boolean;
   isTerminal: boolean;
+  /** State allows execution, but the current role does not (UI messaging only). */
+  executeBlockedByRole: boolean;
+  /** State allows approval, but the current role is not ADMIN (UI messaging only). */
+  approvalBlockedByRole: boolean;
 }
 
 /**
@@ -37,6 +48,7 @@ export interface CaseControls {
 export function getCaseControls(
   status: string,
   latestAction: LatestAction | null,
+  role: UserRole | null = null,
 ): CaseControls {
   const isTerminal = isTerminalStatus(status);
 
@@ -47,17 +59,24 @@ export function getCaseControls(
       canApprove: false,
       canReject: false,
       isTerminal: true,
+      executeBlockedByRole: false,
+      approvalBlockedByRole: false,
     };
   }
 
   const awaitingApproval = status === "AWAITING_APPROVAL" && latestAction !== null;
+  const stateAllowsExecute = status === "RECOMMENDED";
+  const roleAllowsExecute = canExecuteActions(role);
+  const roleAllowsApproval = canApproveActions(role);
 
   return {
     canAnalyze: status === "DETECTED",
-    canExecute: status === "RECOMMENDED",
-    canApprove: awaitingApproval,
-    canReject: awaitingApproval,
+    canExecute: stateAllowsExecute && roleAllowsExecute,
+    canApprove: awaitingApproval && roleAllowsApproval,
+    canReject: awaitingApproval && roleAllowsApproval,
     isTerminal: false,
+    executeBlockedByRole: stateAllowsExecute && !roleAllowsExecute,
+    approvalBlockedByRole: awaitingApproval && !roleAllowsApproval,
   };
 }
 

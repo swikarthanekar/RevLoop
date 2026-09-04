@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/link", () => ({
   default: ({
@@ -113,6 +113,23 @@ const findCaseHeading = () =>
 
 const timelineRegion = () =>
   screen.getByRole("region", { name: "Agent & audit timeline" });
+
+// This file exercises Execute/Approve controls incidentally while testing the
+// audit timeline, not role gating (see case-presentation.test.ts and
+// role.test.ts for that). Fix the role to ADMIN so those controls render.
+const ORIGINAL_DEV_AUTH_TOKEN = process.env.NEXT_PUBLIC_DEV_AUTH_TOKEN;
+
+beforeEach(() => {
+  process.env.NEXT_PUBLIC_DEV_AUTH_TOKEN = "dev-admin";
+});
+
+afterEach(() => {
+  if (ORIGINAL_DEV_AUTH_TOKEN === undefined) {
+    delete process.env.NEXT_PUBLIC_DEV_AUTH_TOKEN;
+  } else {
+    process.env.NEXT_PUBLIC_DEV_AUTH_TOKEN = ORIGINAL_DEV_AUTH_TOKEN;
+  }
+});
 
 const timelineCalls = (calls: CallRecord[]) =>
   calls.filter((call) => isTimelineUrl(call.url));

@@ -143,6 +143,21 @@ export function CaseActionPanel({
           </div>
         ) : null}
 
+        {controls.executeBlockedByRole ? (
+          <p className="rounded-md border border-neutral-200 bg-neutral-50 p-3 text-sm text-neutral-700">
+            A recommendation is ready to execute, but your role cannot
+            execute recovery actions. Ask an operator or admin to complete
+            this action.
+          </p>
+        ) : null}
+
+        {controls.approvalBlockedByRole ? (
+          <p className="rounded-md border border-neutral-200 bg-neutral-50 p-3 text-sm text-neutral-700">
+            Pending approval. Only an admin can approve or reject this
+            action.
+          </p>
+        ) : null}
+
         {controls.canApprove || controls.canReject ? (
           <div className="space-y-3 rounded-md border border-neutral-200 p-3">
             <p className="text-sm text-neutral-700">
