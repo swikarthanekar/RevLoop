@@ -47,6 +47,7 @@ def test_registered_api_v1_routes_after_cleanup() -> None:
     api_v1_paths = sorted(path for path in app.openapi()["paths"] if path.startswith("/api/v1"))
     expected = [
         "/api/v1/",
+        "/api/v1/auth/me",
         "/api/v1/dashboard/summary",
         "/api/v1/recovery-actions/{action_id}/approve",
         "/api/v1/recovery-actions/{action_id}/reject",

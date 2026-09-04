@@ -2,12 +2,17 @@
 
 `DEMO_MODE` decides whether the demo routes are registered at all, and `APP_ENV`
 independently decides which authentication backend resolves the bearer token.
-The two are not the same switch, and only one combination produces a demo that
-can authenticate today. These tests pin that so a deployment configuration
-change cannot quietly turn the demo into a 501, and so the reason is recorded
-next to the code rather than only in deployment notes.
+The two are not the same switch: development selects DevAuthBackend (fixed
+DEV_AUTH_* identity), production selects SupabaseAuthBackend (real JWT
+verification against a provisioned user_profiles row). These tests pin the
+selection and the development backend's own failure modes so a deployment
+configuration change cannot quietly select the wrong backend. SupabaseAuthBackend's
+own JWT-verification behavior (valid/expired/wrong-secret/wrong-audience/no
+matching profile) is covered separately in tests/core/test_supabase_auth.py,
+since it requires a database.
 
-No database is required: the auth decision happens before any route runs.
+No database is required for the tests in this file: they exercise selection
+and the paths that fail before any database lookup would happen.
 """
 
 from __future__ import annotations
@@ -70,19 +75,19 @@ def test_development_app_env_resolves_the_demo_admin_identity() -> None:
     assert str(context.organization_id) == DEMO_ORGANIZATION_ID
 
 
-def test_production_app_env_cannot_authenticate_any_token_yet() -> None:
-    """Supabase JWT verification is unimplemented, so production auth is 501.
-
-    A demo deployed with APP_ENV=production therefore cannot reach POST
-    /api/v1/demo/reset — or any authenticated route — regardless of DEMO_MODE.
+def test_production_app_env_rejects_a_non_jwt_token() -> None:
+    """SupabaseAuthBackend verifies a real Supabase-issued JWT; the
+    development bearer tokens ("dev-admin" etc.) are not valid JWTs and are
+    rejected the same way any malformed token is -- 401, not the old 501
+    stub. (No database needed: JWT decoding fails before any lookup.)
     """
     backend = get_auth_backend(production_settings())
 
     with pytest.raises(HTTPException) as excinfo:
         backend.resolve("dev-admin")
 
-    assert excinfo.value.status_code == 501
-    assert excinfo.value.detail["code"] == "AUTH_NOT_CONFIGURED"
+    assert excinfo.value.status_code == 401
+    assert excinfo.value.detail["code"] == "UNAUTHORIZED"
 
 
 def test_demo_mode_is_configurable_independently_of_app_env() -> None:

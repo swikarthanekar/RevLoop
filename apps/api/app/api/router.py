@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from app.api.routes.auth import router as auth_router
 from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.health import health_router
 from app.api.routes.razorpay_webhooks import router as razorpay_webhooks_router
@@ -17,6 +18,7 @@ def api_v1_root() -> dict[str, str]:
     return {"status": "ok", "version": "v1"}
 
 
+api_v1_router.include_router(auth_router)
 api_v1_router.include_router(dashboard_router)
 api_v1_router.include_router(recovery_cases_router)
 api_v1_router.include_router(recovery_analysis_router)
