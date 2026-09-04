@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { useAuthSession } from "@/lib/auth/session";
 import { getSupabaseClient } from "@/lib/auth/supabase-client";
-import { isSupabaseConfigured } from "@/lib/config/public";
+import { getDemoLoginCredentials, isSupabaseConfigured } from "@/lib/config/public";
 
 const DEFAULT_REDIRECT = "/dashboard";
 
@@ -55,20 +55,20 @@ export function LoginForm() {
     );
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function signIn(
+    credentials: { email: string; password: string },
+    invalidCredentialsMessage: string,
+  ) {
     if (submitting) {
       return;
     }
     setSubmitting(true);
     setError(null);
     try {
-      const { error: signInError } = await getSupabaseClient().auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
+      const { error: signInError } =
+        await getSupabaseClient().auth.signInWithPassword(credentials);
       if (signInError) {
-        setError("Incorrect email or password.");
+        setError(invalidCredentialsMessage);
         return;
       }
       router.replace(redirectTarget);
@@ -79,54 +79,96 @@ export function LoginForm() {
     }
   }
 
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void signIn({ email: email.trim(), password }, "Incorrect email or password.");
+  }
+
+  const demoCredentials = getDemoLoginCredentials();
+
+  function handleDemoSignIn() {
+    if (!demoCredentials) {
+      return;
+    }
+    void signIn(
+      demoCredentials,
+      "Demo sign-in is temporarily unavailable. Use email/password below.",
+    );
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-      <div>
-        <label htmlFor="login-email" className="block text-sm font-medium text-neutral-700">
-          Email
-        </label>
-        <input
-          id="login-email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          required
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="login-password" className="block text-sm font-medium text-neutral-700">
-          Password
-        </label>
-        <input
-          id="login-password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500"
-        />
-      </div>
-
-      {error ? (
-        <p role="alert" className="text-sm text-red-700">
-          {error}
-        </p>
+    <div className="space-y-5">
+      {demoCredentials ? (
+        <div>
+          <button
+            type="button"
+            onClick={handleDemoSignIn}
+            disabled={submitting}
+            aria-busy={submitting}
+            className="inline-flex w-full items-center justify-center rounded-md border border-neutral-900 bg-white px-3 py-2 text-sm font-medium text-neutral-900 hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {submitting ? "Signing in…" : "Continue as demo"}
+          </button>
+          <p className="mt-1.5 text-center text-xs text-neutral-500">
+            Signs in with a shared, read/write demo account — synthetic data
+            and Razorpay Test Mode only.
+          </p>
+          <div className="my-4 flex items-center gap-3 text-xs text-neutral-400">
+            <span className="h-px flex-1 bg-neutral-200" />
+            or sign in
+            <span className="h-px flex-1 bg-neutral-200" />
+          </div>
+        </div>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        aria-busy={submitting}
-        className="inline-flex w-full items-center justify-center rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {submitting ? "Signing in…" : "Sign in"}
-      </button>
-    </form>
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <div>
+          <label htmlFor="login-email" className="block text-sm font-medium text-neutral-700">
+            Email
+          </label>
+          <input
+            id="login-email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="login-password" className="block text-sm font-medium text-neutral-700">
+            Password
+          </label>
+          <input
+            id="login-password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500"
+          />
+        </div>
+
+        {error ? (
+          <p role="alert" className="text-sm text-red-700">
+            {error}
+          </p>
+        ) : null}
+
+        <button
+          type="submit"
+          disabled={submitting}
+          aria-busy={submitting}
+          className="inline-flex w-full items-center justify-center rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {submitting ? "Signing in…" : "Sign in"}
+        </button>
+      </form>
+    </div>
   );
 }

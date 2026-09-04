@@ -66,3 +66,31 @@ export function getSupabaseAnonKey(): string | null {
 export function isSupabaseConfigured(): boolean {
   return getSupabaseUrl() !== null && getSupabaseAnonKey() !== null;
 }
+
+export interface DemoLoginCredentials {
+  email: string;
+  password: string;
+}
+
+/**
+ * A pre-provisioned demo account's credentials, for a one-click "Continue as
+ * demo" button on /login -- judges/reviewers get a real, verified Supabase
+ * session without typing anything.
+ *
+ * Inlined into the browser bundle like NEXT_PUBLIC_DEV_AUTH_TOKEN was, and
+ * carries the same disclosed tradeoff: anyone who opens the deployed site
+ * can extract this password and sign in as this account. Only provision an
+ * account for this that is scoped to demo/synthetic data you're comfortable
+ * being public -- never a real customer or personal account.
+ */
+export function getDemoLoginCredentials(): DemoLoginCredentials | null {
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+  const email = process.env.NEXT_PUBLIC_DEMO_LOGIN_EMAIL?.trim();
+  const password = process.env.NEXT_PUBLIC_DEMO_LOGIN_PASSWORD;
+  if (!email || !password) {
+    return null;
+  }
+  return { email, password };
+}

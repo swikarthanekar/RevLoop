@@ -133,6 +133,12 @@ Supabase Auth user alone is not enough.
    return the organization and role from the row above; if it 403s with
    `NO_ORGANIZATION_MEMBERSHIP`, the `auth_user_id` in step 3 doesn't match
    the signed-in user's UUID.
+5. Optional: to give judges/reviewers a one-click "Continue as demo" button
+   instead of asking them to type this account's credentials, set
+   `NEXT_PUBLIC_DEMO_LOGIN_EMAIL`/`NEXT_PUBLIC_DEMO_LOGIN_PASSWORD` on Vercel
+   to this same email/password — see [section
+   4.1](#41-public-environment-variables) for the exposure tradeoff before
+   doing so.
 
 ---
 
@@ -256,12 +262,22 @@ Only these `NEXT_PUBLIC_*` names are read anywhere in `apps/web`:
 | `NEXT_PUBLIC_APP_MODE` | optional | `demo` (the default and only accepted value) |
 | `NEXT_PUBLIC_SUPABASE_URL` | yes, for a real login | `https://<project-ref>.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | yes, for a real login | Supabase anon/public key — safe to expose (Supabase's own design); used only for Auth, never data access |
+| `NEXT_PUBLIC_DEMO_LOGIN_EMAIL` | optional | email of the demo account from [section 2.5](#25-provisioning-a-real-admin-user); enables a "Continue as demo" one-click button on `/login` |
+| `NEXT_PUBLIC_DEMO_LOGIN_PASSWORD` | optional | that account's password — see the exposure note below before setting this |
 | `NEXT_PUBLIC_DEV_AUTH_TOKEN` | **no**, once Supabase is set | see [section 1](#1-authentication) |
 
 Both `NEXT_PUBLIC_SUPABASE_*` variables must be set together — the frontend
 requires a real Supabase sign-in whenever they're both present (`/login`
 becomes functional) and falls back to `NEXT_PUBLIC_DEV_AUTH_TOKEN` only when
 either is absent.
+
+`NEXT_PUBLIC_DEMO_LOGIN_PASSWORD` is inlined into the public bundle exactly
+like `NEXT_PUBLIC_DEV_AUTH_TOKEN` was — anyone who opens the deployed site
+can extract it and sign in as that account. Only set it for an account
+scoped to demo/synthetic data (the one provisioned in section 2.5 is
+designed for exactly this); never for a real customer or personal account.
+Omit both `NEXT_PUBLIC_DEMO_LOGIN_*` variables to require typed credentials
+instead — the demo button simply doesn't render.
 
 The variable is `NEXT_PUBLIC_API_BASE_URL`, not `NEXT_PUBLIC_API_URL`.
 `NEXT_PUBLIC_*` values are inlined into the browser bundle at build time, so

@@ -24,6 +24,8 @@ import { LoginForm } from "@/app/login/login-form";
 
 const ORIGINAL_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ORIGINAL_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const ORIGINAL_DEMO_EMAIL = process.env.NEXT_PUBLIC_DEMO_LOGIN_EMAIL;
+const ORIGINAL_DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_LOGIN_PASSWORD;
 
 afterEach(() => {
   if (ORIGINAL_SUPABASE_URL === undefined) {
@@ -36,6 +38,16 @@ afterEach(() => {
   } else {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = ORIGINAL_SUPABASE_ANON_KEY;
   }
+  if (ORIGINAL_DEMO_EMAIL === undefined) {
+    delete process.env.NEXT_PUBLIC_DEMO_LOGIN_EMAIL;
+  } else {
+    process.env.NEXT_PUBLIC_DEMO_LOGIN_EMAIL = ORIGINAL_DEMO_EMAIL;
+  }
+  if (ORIGINAL_DEMO_PASSWORD === undefined) {
+    delete process.env.NEXT_PUBLIC_DEMO_LOGIN_PASSWORD;
+  } else {
+    process.env.NEXT_PUBLIC_DEMO_LOGIN_PASSWORD = ORIGINAL_DEMO_PASSWORD;
+  }
   replaceMock.mockReset();
   searchParams = new URLSearchParams();
   getSession.mockReset();
@@ -47,6 +59,11 @@ afterEach(() => {
 function configureSupabase() {
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://project.supabase.co";
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-value";
+}
+
+function configureDemoCredentials() {
+  process.env.NEXT_PUBLIC_DEMO_LOGIN_EMAIL = "demo@example.com";
+  process.env.NEXT_PUBLIC_DEMO_LOGIN_PASSWORD = "demo-password-value";
 }
 
 function renderForm() {
@@ -189,5 +206,97 @@ describe("LoginForm — Supabase configured", () => {
     });
 
     global.fetch = originalFetch;
+  });
+});
+
+describe("LoginForm — demo sign-in button", () => {
+  it("is not shown when no demo credentials are configured", () => {
+    configureSupabase();
+    getSession.mockResolvedValue({ data: { session: null } });
+
+    renderForm();
+
+    expect(
+      screen.queryByRole("button", { name: "Continue as demo" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("signs in with the configured demo credentials on click, without typing anything", async () => {
+    configureSupabase();
+    configureDemoCredentials();
+    getSession.mockResolvedValue({ data: { session: null } });
+    signInWithPassword.mockResolvedValue({ error: null });
+
+    renderForm();
+    fireEvent.click(screen.getByRole("button", { name: "Continue as demo" }));
+
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith("/dashboard");
+    });
+    expect(signInWithPassword).toHaveBeenCalledWith({
+      email: "demo@example.com",
+      password: "demo-password-value",
+    });
+  });
+
+  it("honors a ?next= redirect target from the demo button too", async () => {
+    configureSupabase();
+    configureDemoCredentials();
+    getSession.mockResolvedValue({ data: { session: null } });
+    signInWithPassword.mockResolvedValue({ error: null });
+    searchParams = new URLSearchParams({ next: "/recovery/abc-123" });
+
+    renderForm();
+    fireEvent.click(screen.getByRole("button", { name: "Continue as demo" }));
+
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith("/recovery/abc-123");
+    });
+  });
+
+  it("shows a distinct error if the demo account itself is rejected", async () => {
+    configureSupabase();
+    configureDemoCredentials();
+    getSession.mockResolvedValue({ data: { session: null } });
+    signInWithPassword.mockResolvedValue({ error: { message: "Invalid login credentials" } });
+
+    renderForm();
+    fireEvent.click(screen.getByRole("button", { name: "Continue as demo" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Demo sign-in is temporarily unavailable. Use email/password below.",
+    );
+    expect(replaceMock).not.toHaveBeenCalled();
+  });
+
+  it("does not let the manual form and the demo button submit concurrently", async () => {
+    configureSupabase();
+    configureDemoCredentials();
+    getSession.mockResolvedValue({ data: { session: null } });
+    let resolveSignIn: (value: { error: null }) => void = () => {};
+    signInWithPassword.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSignIn = resolve;
+      }),
+    );
+
+    renderForm();
+    fireEvent.click(screen.getByRole("button", { name: "Continue as demo" }));
+
+    // The manual submit button is now disabled too (shared `submitting`
+    // state, so both buttons read "Signing in…"); a click on a disabled
+    // button is a no-op in the DOM. Distinguish it from the demo button by
+    // its actual type="submit".
+    const submitButton = screen
+      .getAllByRole("button", { name: /Sign in|Signing in/ })
+      .find((button) => button.getAttribute("type") === "submit");
+    expect(submitButton).toBeDisabled();
+    fireEvent.click(submitButton as HTMLElement);
+
+    resolveSignIn({ error: null });
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith("/dashboard");
+    });
+    expect(signInWithPassword).toHaveBeenCalledTimes(1);
   });
 });
