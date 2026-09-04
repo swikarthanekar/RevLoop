@@ -410,3 +410,33 @@ That reports whether the canonical `scripts/ml` modules resolve, the demo
 run-batch dependency imports, the frozen model artifact is present and loads,
 and no duplicate copy of the canonical ML source shipped. The same checks run in
 the normal test suite through `apps/api/tests/deploy/test_runtime_packaging.py`.
+
+---
+
+## 13. Operational runbooks
+
+### 13.1 A Payment Link action is stuck `UNKNOWN`
+
+`RecoveryActionService._maybe_reconcile_payment_link_action`
+(`apps/api/app/actions/service.py`) automatically reconciles an unresolved
+`CREATE_PAYMENT_LINK` action the next time its idempotency key is looked up,
+by fetching the link from Razorpay by `reference_id`. If that fetch comes
+back `not_found` — the link genuinely does not exist, as opposed to a
+transient error or an ambiguous match — reconciliation intentionally does
+nothing further: it does not fabricate a replacement action, and it does not
+change case state on a single unconfirmed read.
+
+Because the action's idempotency key is deterministic
+(`case_id` + `recommendation_id` + `action_type`), no new
+`CREATE_PAYMENT_LINK` action can ever be created for that same
+recommendation — the same key would collide with the stuck row. The case
+stays `WAITING_FOR_OUTCOME` until an operator intervenes.
+
+**Manual recovery:** call `POST /api/v1/recovery-cases/{id}/analyze` with
+`reason=NEW_PROVIDER_EVIDENCE` while the case is `WAITING_FOR_OUTCOME`. This
+produces a fresh `analysis_run_id` and a fresh recommendation, which changes
+the idempotency key's inputs and unblocks a new action on the next
+`POST /recovery-cases/{id}/actions` call. Confirm first (via the Razorpay
+dashboard or a manual `GET /v1/payment_links/{id}`) that the original link
+truly never existed, so a new one isn't created alongside a link that was
+actually there.

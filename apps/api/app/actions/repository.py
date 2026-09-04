@@ -37,9 +37,21 @@ class RecoveryActionRepository:
             )
         ).scalar_one_or_none()
 
-    def get_by_idempotency_key(self, idempotency_key: str) -> RecoveryAction | None:
+    def get_by_idempotency_key(
+        self,
+        idempotency_key: str,
+        *,
+        organization_id: UUID,
+    ) -> RecoveryAction | None:
+        # The key is derived from an already org-scoped case_id/recommendation_id
+        # (see build_action_idempotency_key), so a cross-tenant collision is not
+        # feasible today. The explicit filter is defense-in-depth, matching every
+        # other lookup in this repository.
         return self._session.execute(
-            select(RecoveryAction).where(RecoveryAction.idempotency_key == idempotency_key)
+            select(RecoveryAction).where(
+                RecoveryAction.idempotency_key == idempotency_key,
+                RecoveryAction.organization_id == organization_id,
+            )
         ).scalar_one_or_none()
 
     def get_blocking_payment_link_action(

@@ -162,7 +162,9 @@ class RecoveryActionService:
             recommendation_id=recommendation.id,
             action_type=action_type.value,
         )
-        existing = self._repo.get_by_idempotency_key(idempotency_key)
+        existing = self._repo.get_by_idempotency_key(
+            idempotency_key, organization_id=organization_id
+        )
         if existing is not None:
             refreshed_case = self._reload_case(case.id, organization_id)
             if existing.action_type == RecoveryActionType.CREATE_PAYMENT_LINK.value:
@@ -203,7 +205,9 @@ class RecoveryActionService:
             )
         except IntegrityError:
             self._session.rollback()
-            existing = self._repo.get_by_idempotency_key(idempotency_key)
+            existing = self._repo.get_by_idempotency_key(
+                idempotency_key, organization_id=organization_id
+            )
             if existing is None:
                 raise
             return self._to_payload(existing, self._reload_case(case.id, organization_id))
