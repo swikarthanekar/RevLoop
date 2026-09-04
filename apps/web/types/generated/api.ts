@@ -107,6 +107,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Policy */
+        get: operations["get_policy_api_v1_policies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recovery-actions/{action_id}/approve": {
         parameters: {
             query?: never;
@@ -610,6 +627,29 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** PolicyResponse */
+        PolicyResponse: {
+            /** Allowed Action Types */
+            allowed_action_types: components["schemas"]["RecoveryActionType"][];
+            /** Auto Action Limit Minor */
+            auto_action_limit_minor: number;
+            /** Automation Enabled */
+            automation_enabled: boolean;
+            /** Contact Action Types */
+            contact_action_types: components["schemas"]["RecoveryActionType"][];
+            /** Cooldown Action Types */
+            cooldown_action_types: components["schemas"]["RecoveryActionType"][];
+            /** Cooldown Minutes */
+            cooldown_minutes: number;
+            /** Manual Contact Approval Action Types */
+            manual_contact_approval_action_types: components["schemas"]["RecoveryActionType"][];
+            /** Max Contacts Per 24H */
+            max_contacts_per_24h: number;
+            /** Max Recovery Attempts */
+            max_recovery_attempts: number;
+            /** Minimum Auto Confidence */
+            minimum_auto_confidence: number;
+        };
         /**
          * PolicySimulationSummary
          * @description Per-policy synthetic metrics, exactly as the canonical evaluator reports.
@@ -1036,6 +1076,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DemoBatchResponse"];
+                };
+            };
+        };
+    };
+    get_policy_api_v1_policies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyResponse"];
                 };
             };
         };
