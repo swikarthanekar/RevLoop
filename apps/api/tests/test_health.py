@@ -50,6 +50,7 @@ def test_registered_api_v1_routes_after_cleanup() -> None:
         "/api/v1/auth/me",
         "/api/v1/dashboard/summary",
         "/api/v1/policies",
+        "/api/v1/provider-events",
         "/api/v1/recovery-actions/{action_id}/approve",
         "/api/v1/recovery-actions/{action_id}/reject",
         "/api/v1/recovery-cases",
@@ -57,9 +58,18 @@ def test_registered_api_v1_routes_after_cleanup() -> None:
         "/api/v1/recovery-cases/{case_id}/actions",
         "/api/v1/recovery-cases/{case_id}/analyze",
         "/api/v1/recovery-cases/{case_id}/timeline",
+        # Read-only scoring of a hypothetical scenario. Deliberately NOT a demo
+        # route: it writes nothing and is a legitimate read of the decision
+        # engine, so gating it behind DEMO_MODE would imply otherwise.
+        "/api/v1/simulator/score",
         "/api/v1/webhooks/razorpay",
     ]
     # Demo routes are registered only under DEMO_MODE.
     if get_settings().demo_mode:
-        expected += ["/api/v1/demo/reset", "/api/v1/demo/run-batch"]
+        expected += [
+            "/api/v1/demo/evaluation",
+            "/api/v1/demo/evaluation/recompute",
+            "/api/v1/demo/reset",
+            "/api/v1/demo/run-batch",
+        ]
     assert api_v1_paths == sorted(expected)

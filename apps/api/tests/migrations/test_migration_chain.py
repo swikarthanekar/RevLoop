@@ -14,6 +14,7 @@ REVISIONS = [
     ("m3r04_recovery_decisions", "m3r03_recovery_cases"),
     ("m3r05_recovery_outcomes", "m3r04_recovery_decisions"),
     ("m3r06_webhooks_audit_policy", "m3r05_recovery_outcomes"),
+    ("m3r07_erv_breakdown", "m3r06_webhooks_audit_policy"),
 ]
 
 EXPECTED_TABLES = {
@@ -46,14 +47,16 @@ def _revision_source(revision_id: str) -> str:
     return matches[0].read_text()
 
 
-def test_six_revisions_exist_in_linear_chain() -> None:
+def test_every_revision_forms_one_linear_chain() -> None:
+    """Asserted against REVISIONS rather than a hardcoded count, so adding a
+    migration means updating one list instead of a magic number in two places."""
     script = ScriptDirectory.from_config(_alembic_config())
     heads = script.get_heads()
-    assert heads == ["m3r06_webhooks_audit_policy"]
+    assert heads == [REVISIONS[-1][0]]
 
     revisions = list(script.walk_revisions(base="base", head="heads"))
     revision_ids = {rev.revision for rev in revisions}
-    assert len(revisions) == 6
+    assert len(revisions) == len(REVISIONS)
     assert revision_ids == {rev_id for rev_id, _ in REVISIONS}
 
     by_id = {rev.revision: rev for rev in revisions}
