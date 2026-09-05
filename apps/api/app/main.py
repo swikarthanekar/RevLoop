@@ -8,12 +8,20 @@ from app.core.config import get_settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import RequestIdMiddleware
+from app.demo.batch_cache import warm_cache_in_background
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     settings = get_settings()
     configure_logging(settings.log_level)
+    if settings.demo_mode:
+        # The held-out policy simulation costs ~20s cold because it regenerates
+        # the synthetic dataset. Warming it on a daemon thread means the
+        # evaluation page answers immediately instead of making its first
+        # visitor wait. Failure is logged, never raised: a warm-up must not be
+        # able to stop the application from serving.
+        warm_cache_in_background()
     yield
 
 

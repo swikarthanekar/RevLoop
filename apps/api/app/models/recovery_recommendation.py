@@ -66,6 +66,16 @@ class RecoveryRecommendation(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     success_probability: Mapped[Decimal] = mapped_column(Numeric(7, 6), nullable=False)
     expected_recovered_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
     expected_value_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    # The components `expected_value_minor` was derived from. Nullable because
+    # rows written before m3r07 have none; a reader that finds them absent must
+    # omit the breakdown rather than recompute it, since the fatigue penalty
+    # depends on a `contacts_last_24h` value that is not persisted.
+    erv_action_cost_minor: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    erv_fatigue_penalty_minor: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    erv_operational_risk_penalty_minor: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
+    erv_delay_penalty_minor: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     confidence: Mapped[Decimal] = mapped_column(Numeric(7, 6), nullable=False)
     policy_eligible: Mapped[bool] = mapped_column(Boolean, nullable=False)
     requires_approval: Mapped[bool] = mapped_column(Boolean, nullable=False)

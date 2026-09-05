@@ -55,6 +55,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/demo/evaluation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Evaluation
+         * @description Serve the cached held-out policy simulation.
+         *
+         *     Readable by any authenticated role, unlike the ADMIN-gated operations
+         *     below: this returns a stored, read-only evaluation and changes nothing.
+         *
+         *     The cache is normally warmed at startup, so this answers immediately. If
+         *     warm-up has not finished the first caller computes it, which is slower but
+         *     correct -- never a placeholder or a stale stand-in.
+         */
+        get: operations["read_evaluation_api_v1_demo_evaluation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/demo/evaluation/recompute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recompute Evaluation
+         * @description Re-run the simulation and replace the cache.
+         *
+         *     ADMIN-gated not because it mutates business data -- it touches none -- but
+         *     because it is several seconds of CPU that anyone could otherwise trigger
+         *     repeatedly.
+         *
+         *     Its real purpose is evidential: running it in front of a reader, and
+         *     watching `computed_at` move while every figure stays identical, demonstrates
+         *     both that the evaluation is live and that it is deterministic.
+         */
+        post: operations["recompute_evaluation_api_v1_demo_evaluation_recompute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/demo/reset": {
         parameters: {
             query?: never;
@@ -70,7 +125,13 @@ export interface paths {
          *
          *     `seed_demo_database(reset=True)` deletes the demo tenant and reseeds it in a
          *     single transaction, so a failure mid-way rolls back rather than publishing a
-         *     half-reset database.
+         *     half-reset database. Externally provisioned `user_profiles` rows are carried
+         *     across the rebuild, so a reset can never lock a real account out of the
+         *     tenant it administers.
+         *
+         *     Refusal by `assert_reset_allowed` raises `ResetNotAllowedError`, which is an
+         *     `AppError`, so a blocked reset answers `403` with a specific code rather
+         *     than an opaque `500`.
          */
         post: operations["reset_demo_api_v1_demo_reset_post"];
         delete?: never;
@@ -116,6 +177,30 @@ export interface paths {
         };
         /** Get Policy */
         get: operations["get_policy_api_v1_policies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/provider-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Provider Events
+         * @description Recent webhook events for the caller's organization, newest first.
+         *
+         *     Every role may read this. It reveals nothing a member of the organization
+         *     cannot already see, and the audit value of the view depends on operators
+         *     being able to look at it without an elevated role.
+         */
+        get: operations["list_provider_events_api_v1_provider_events_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -243,6 +328,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/simulator/score": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Score Scenario
+         * @description Score a hypothetical failed payment.
+         *
+         *     Every role may call this: it creates nothing and changes nothing, so there
+         *     is no privilege to gate. Authentication is still required, because the
+         *     response reveals the caller's own merchant policy thresholds.
+         *
+         *     Declared `def` rather than `async def` -- scoring is synchronous CPU work in
+         *     scikit-learn, so FastAPI runs it in its threadpool instead of stalling the
+         *     event loop while a slider drags.
+         */
+        post: operations["score_scenario_api_v1_simulator_score_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/webhooks/razorpay": {
         parameters: {
             query?: never;
@@ -295,6 +408,12 @@ export interface components {
             recovery_rate: number;
         };
         /**
+         * ActionExecutionMode
+         * @description Whether RevLoop performs an action, or only recommends it.
+         * @enum {string}
+         */
+        ActionExecutionMode: "EXECUTABLE" | "ADVISORY";
+        /**
          * AnalysisReason
          * @enum {string}
          */
@@ -323,6 +442,8 @@ export interface components {
             explanation_source?: string | null;
             selected: components["schemas"]["SelectedRecommendationResponse"] | null;
             status: components["schemas"]["RecoveryCaseStatus"];
+            /** Top Ranked Action */
+            top_ranked_action?: string | null;
         };
         /** ApproveRecoveryActionRequest */
         ApproveRecoveryActionRequest: {
@@ -341,12 +462,41 @@ export interface components {
             /** Case Status */
             case_status: string;
         };
+        /**
+         * BaselineAssumption
+         * @description How `baseline_recovered_minor` was arrived at.
+         *
+         *     Served from the server rather than written into UI copy, so the disclosure
+         *     cannot drift from the constant it describes. `incremental_recovered_minor`
+         *     is a MODELLED counterfactual, not a measured control group: there is no
+         *     holdout of untreated cases in this dataset. Presenting it as a flat
+         *     comparison without saying so would invite a reasonable "how do you know?"
+         *     that the number cannot answer.
+         */
+        BaselineAssumption: {
+            /** Description */
+            description: string;
+            /**
+             * Kind
+             * @default MODELLED_COUNTERFACTUAL
+             */
+            kind: string;
+            /** Naive Actions */
+            naive_actions: string[];
+            /** Naive Recovery Rate */
+            naive_recovery_rate: number;
+        };
         /** CandidateRecommendationResponse */
         CandidateRecommendationResponse: {
             /** Action Type */
             action_type: string;
+            /** Advisory Reason */
+            advisory_reason?: string | null;
+            /** Advisory Reason Code */
+            advisory_reason_code?: string | null;
             /** Confidence */
             confidence: number;
+            execution_mode: components["schemas"]["ActionExecutionMode"];
             /** Expected Recovered Minor */
             expected_recovered_minor: number;
             /** Expected Value Minor */
@@ -378,6 +528,8 @@ export interface components {
             /** Selected Action */
             selected_action: string;
             structured_explanation: components["schemas"]["StructuredExplanation"];
+            /** Top Ranked Action */
+            top_ranked_action: string;
         };
         /** CaseCore */
         CaseCore: {
@@ -424,6 +576,11 @@ export interface components {
             /** Verification Source */
             verification_source: string;
         };
+        /**
+         * CaseType
+         * @enum {string}
+         */
+        CaseType: "PAYMENT_FAILURE" | "SUBSCRIPTION_FAILURE" | "OVERDUE_INVOICE";
         /** CreateRecoveryActionRequest */
         CreateRecoveryActionRequest: {
             action_type: components["schemas"]["RecoveryActionType"];
@@ -500,6 +657,7 @@ export interface components {
             active_cases: number;
             /** Average Recovery Seconds */
             average_recovery_seconds: number | null;
+            baseline_assumption: components["schemas"]["BaselineAssumption"];
             /** Baseline Recovered Minor */
             baseline_recovered_minor: number;
             /** Currency */
@@ -536,6 +694,30 @@ export interface components {
             split: string;
         };
         /**
+         * DemoBatchCachedResponse
+         * @description A stored policy simulation, with the provenance of the run itself.
+         *
+         *     `computed_at` and `duration_seconds` are shown to the reader on purpose. A
+         *     number presented without saying when it was produced invites the assumption
+         *     that it is a fixture; stating it, and offering a recompute, answers that
+         *     before it is asked.
+         */
+        DemoBatchCachedResponse: {
+            /**
+             * Computed At
+             * Format: date-time
+             */
+            computed_at: string;
+            /** Duration Seconds */
+            duration_seconds: number;
+            evaluation: components["schemas"]["DemoBatchResponse"];
+            /**
+             * Recomputed
+             * @default false
+             */
+            recomputed: boolean;
+        };
+        /**
          * DemoBatchResponse
          * @description Synthetic counterfactual comparison of RevLoop against the naive baseline.
          */
@@ -570,12 +752,40 @@ export interface components {
             data_source: "SYNTHETIC_SIMULATION";
             /** Organization Id */
             organization_id: string;
+            /**
+             * Preserved User Profiles
+             * @default 0
+             */
+            preserved_user_profiles: number;
             /** Recovery Case Count */
             recovery_case_count: number;
             /** Reset Performed */
             reset_performed: boolean;
             /** Seed Version */
             seed_version: string;
+        };
+        /**
+         * ERVBreakdownResponse
+         * @description Component arithmetic for one candidate's expected value.
+         *
+         *     `expected_recovered_minor` less every penalty equals `expected_value_minor`
+         *     exactly; the server refuses to emit this object at all when the stored
+         *     components do not reconcile, so a client can render the subtraction without
+         *     checking it.
+         */
+        ERVBreakdownResponse: {
+            /** Action Cost Minor */
+            action_cost_minor: number;
+            /** Delay Penalty Minor */
+            delay_penalty_minor: number;
+            /** Expected Recovered Minor */
+            expected_recovered_minor: number;
+            /** Expected Value Minor */
+            expected_value_minor: number;
+            /** Fatigue Penalty Minor */
+            fatigue_penalty_minor: number;
+            /** Operational Risk Penalty Minor */
+            operational_risk_penalty_minor: number;
         };
         /** FailureBreakdownRow */
         FailureBreakdownRow: {
@@ -586,6 +796,11 @@ export interface components {
             /** Failure Category */
             failure_category: string;
         };
+        /**
+         * FailureCategory
+         * @enum {string}
+         */
+        FailureCategory: "PAYMENT_RAIL_DOWNTIME" | "INSUFFICIENT_FUNDS" | "AUTHENTICATION_FAILURE" | "BANK_OR_ISSUER_DECLINE" | "EXPIRED_OR_INVALID_METHOD" | "CUSTOMER_ABANDONMENT" | "MANDATE_OR_RECURRING_FAILURE" | "TECHNICAL_FAILURE" | "UNKNOWN";
         /** FailureEvidence */
         FailureEvidence: {
             /** Error Code */
@@ -676,10 +891,74 @@ export interface components {
             /** Stop Count */
             stop_count: number;
         };
+        /**
+         * ProviderEventStats
+         * @description Aggregate counts, so the view leads with the shape of the traffic.
+         */
+        ProviderEventStats: {
+            /** Duplicates Suppressed */
+            duplicates_suppressed: number;
+            /** Failed */
+            failed: number;
+            /** Ignored */
+            ignored: number;
+            /** Processed */
+            processed: number;
+            /** Signature Rejected */
+            signature_rejected: number;
+            /** Signature Valid */
+            signature_valid: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * ProviderEventSummary
+         * @description One received webhook and what the system decided about it.
+         */
+        ProviderEventSummary: {
+            /** Case Id */
+            case_id?: string | null;
+            /**
+             * Duplicate Of Earlier Event
+             * @default false
+             */
+            duplicate_of_earlier_event: boolean;
+            /** Event Type */
+            event_type: string;
+            /** Processed At */
+            processed_at: string | null;
+            /** Processing Error */
+            processing_error?: string | null;
+            /** Processing Status */
+            processing_status: string;
+            /** Provider */
+            provider: string;
+            /** Provider Event Id */
+            provider_event_id: string;
+            /**
+             * Received At
+             * Format: date-time
+             */
+            received_at: string;
+            /** Signature Valid */
+            signature_valid: boolean;
+        };
+        /** ProviderEventsResponse */
+        ProviderEventsResponse: {
+            /** Events */
+            events: components["schemas"]["ProviderEventSummary"][];
+            stats: components["schemas"]["ProviderEventStats"];
+        };
         /** RecommendationCandidate */
         RecommendationCandidate: {
             /** Action Type */
             action_type: string;
+            /** Advisory Reason */
+            advisory_reason?: string | null;
+            /** Advisory Reason Code */
+            advisory_reason_code?: string | null;
+            erv_breakdown?: components["schemas"]["ERVBreakdownResponse"] | null;
+            execution_mode: components["schemas"]["ActionExecutionMode"];
             /** Expected Recovered Minor */
             expected_recovered_minor: number;
             /** Expected Value Minor */
@@ -862,6 +1141,165 @@ export interface components {
             /** Success Probability */
             success_probability: number;
         };
+        /**
+         * SimulatedCandidate
+         * @description One scored action, with the arithmetic and the policy verdict.
+         */
+        SimulatedCandidate: {
+            /** Action Cost Minor */
+            action_cost_minor: number;
+            /** Action Type */
+            action_type: string;
+            /** Advisory Reason */
+            advisory_reason?: string | null;
+            /** Confidence */
+            confidence: number;
+            /** Delay Penalty Minor */
+            delay_penalty_minor: number;
+            execution_mode: components["schemas"]["ActionExecutionMode"];
+            /** Expected Recovered Minor */
+            expected_recovered_minor: number;
+            /** Expected Value Minor */
+            expected_value_minor: number;
+            /** Fatigue Penalty Minor */
+            fatigue_penalty_minor: number;
+            /** Operational Risk Penalty Minor */
+            operational_risk_penalty_minor: number;
+            /** Policy Eligible */
+            policy_eligible: boolean;
+            /** Policy Reasons */
+            policy_reasons: string[];
+            /** Rank */
+            rank: number;
+            /** Requires Approval */
+            requires_approval: boolean;
+            /**
+             * Selected
+             * @default false
+             */
+            selected: boolean;
+            /** Success Probability */
+            success_probability: number;
+        };
+        /**
+         * SimulationRequest
+         * @description A hypothetical failed payment to score.
+         */
+        SimulationRequest: {
+            /**
+             * Alternate Method Recent Success
+             * @default true
+             */
+            alternate_method_recent_success: boolean;
+            /** Amount Minor */
+            amount_minor: number;
+            /** @default PAYMENT_FAILURE */
+            case_type: components["schemas"]["CaseType"];
+            /**
+             * Contacts Last 24H
+             * @default 0
+             */
+            contacts_last_24h: number;
+            /**
+             * Customer Segment
+             * @default REGULAR
+             */
+            customer_segment: string;
+            /**
+             * Customer Tenure Days
+             * @default 180
+             */
+            customer_tenure_days: number;
+            /**
+             * Failed Payments 30D
+             * @default 1
+             */
+            failed_payments_30d: number;
+            failure_category: components["schemas"]["FailureCategory"];
+            /**
+             * Hours Since Failure
+             * @default 2
+             */
+            hours_since_failure: number;
+            /**
+             * Lifetime Value Minor
+             * @default 5000000
+             */
+            lifetime_value_minor: number;
+            /**
+             * Payment Method
+             * @default upi
+             * @enum {string}
+             */
+            payment_method: "upi" | "card" | "netbanking" | "wallet" | "unknown";
+            /**
+             * Payment Success Rate 90D
+             * @default 0.8
+             */
+            payment_success_rate_90d: number;
+            /**
+             * Provider Retries Active
+             * @default false
+             */
+            provider_retries_active: boolean;
+            /**
+             * Rail Degraded
+             * @default false
+             */
+            rail_degraded: boolean;
+            /**
+             * Recovery Attempts So Far
+             * @default 0
+             */
+            recovery_attempts_so_far: number;
+            /**
+             * Retry Count Provider
+             * @default 0
+             */
+            retry_count_provider: number;
+            /**
+             * Same Method Recent Success
+             * @default true
+             */
+            same_method_recent_success: boolean;
+            /** Subscription Status */
+            subscription_status?: string | null;
+            /**
+             * Successful Payments 90D
+             * @default 8
+             */
+            successful_payments_90d: number;
+        };
+        /** SimulationResponse */
+        SimulationResponse: {
+            /** Amount At Risk Minor */
+            amount_at_risk_minor: number;
+            /** Candidates */
+            candidates: components["schemas"]["SimulatedCandidate"][];
+            /** Currency */
+            currency: string;
+            /**
+             * Data Source
+             * @default INTERACTIVE_SIMULATION
+             */
+            data_source: string;
+            /** Feature Schema Version */
+            feature_schema_version: string;
+            /** Inference Source */
+            inference_source: string;
+            /** Model Family */
+            model_family: string;
+            /** Model Version */
+            model_version: string;
+            /** Policy Auto Action Limit Minor */
+            policy_auto_action_limit_minor: number;
+            /** Policy Minimum Auto Confidence */
+            policy_minimum_auto_confidence: number;
+            /** Selected Action */
+            selected_action: string | null;
+            /** Top Ranked Action */
+            top_ranked_action: string | null;
+        };
         /** SourceSubscription */
         SourceSubscription: {
             /** Failure Evidence */
@@ -1042,6 +1480,46 @@ export interface operations {
             };
         };
     };
+    read_evaluation_api_v1_demo_evaluation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoBatchCachedResponse"];
+                };
+            };
+        };
+    };
+    recompute_evaluation_api_v1_demo_evaluation_recompute_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoBatchCachedResponse"];
+                };
+            };
+        };
+    };
     reset_demo_api_v1_demo_reset_post: {
         parameters: {
             query?: never;
@@ -1098,6 +1576,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PolicyResponse"];
+                };
+            };
+        };
+    };
+    list_provider_events_api_v1_provider_events_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderEventsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1332,6 +1841,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TimelineResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    score_scenario_api_v1_simulator_score_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimulationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimulationResponse"];
                 };
             };
             /** @description Validation Error */
