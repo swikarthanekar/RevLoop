@@ -106,7 +106,7 @@ export function CaseActionPanel({
         {controls.canExecute ? (
           <div className="space-y-2">
             {policyBlocked ? (
-              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              <div className="rounded-md border border-warning-border bg-warning-surface p-3 text-sm text-warning-ink">
                 <p className="font-medium">Blocked by policy</p>
                 {selectedCandidate && selectedCandidate.policy_reasons.length > 0 ? (
                   <ul className="mt-1 list-disc space-y-0.5 pl-5">

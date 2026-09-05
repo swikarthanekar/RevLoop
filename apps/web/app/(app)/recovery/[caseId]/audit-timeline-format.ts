@@ -47,8 +47,8 @@ const CATEGORIES: Record<TimelineCategory, CategoryPresentation> = {
   provider: {
     id: "provider",
     label: "Provider event",
-    badgeClass: "border-sky-300 bg-sky-50 text-sky-900",
-    markerClass: "border-sky-400 bg-sky-100",
+    badgeClass: "border-info-border bg-info-surface text-info-ink",
+    markerClass: "border-info-border bg-info-border",
   },
   analysis: {
     id: "analysis",
@@ -59,8 +59,8 @@ const CATEGORIES: Record<TimelineCategory, CategoryPresentation> = {
   policy: {
     id: "policy",
     label: "Policy decision",
-    badgeClass: "border-amber-300 bg-amber-50 text-amber-900",
-    markerClass: "border-amber-400 bg-amber-100",
+    badgeClass: "border-warning-border bg-warning-surface text-warning-ink",
+    markerClass: "border-warning-border bg-warning-border",
   },
   approval: {
     id: "approval",
@@ -77,14 +77,14 @@ const CATEGORIES: Record<TimelineCategory, CategoryPresentation> = {
   outcome: {
     id: "outcome",
     label: "Recovery outcome",
-    badgeClass: "border-emerald-300 bg-emerald-50 text-emerald-900",
-    markerClass: "border-emerald-400 bg-emerald-100",
+    badgeClass: "border-success-border bg-success-surface text-success-ink",
+    markerClass: "border-success-border bg-success-border",
   },
   warning: {
     id: "warning",
     label: "Warning",
-    badgeClass: "border-rose-300 bg-rose-50 text-rose-900",
-    markerClass: "border-rose-400 bg-rose-100",
+    badgeClass: "border-danger-border bg-danger-surface text-danger-ink",
+    markerClass: "border-danger-border bg-danger-border",
   },
   system: {
     id: "system",

@@ -214,7 +214,12 @@ describe("CaseDetailClient — loading, success, not found", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("UPI rail degradation is active")).toBeInTheDocument();
     expect(screen.getByText("Active upi downtime")).toBeInTheDocument();
-    expect(screen.getByText("Probability is a model estimate, not a guarantee.")).toBeInTheDocument();
+    // Matched loosely: the sentence now continues with which action the
+    // figures belong to, so an exact-string query would break on copy edits
+    // without telling us anything useful.
+    expect(
+      screen.getByText(/Probability is a model estimate, not a guarantee\./),
+    ).toBeInTheDocument();
   });
 
   it("shows a clean not-found state for 404", async () => {

@@ -15,8 +15,8 @@ interface StatCardProps {
 }
 
 const ACCENT_BAR: Record<NonNullable<StatCardProps["accent"]>, string> = {
-  on: "bg-emerald-600",
-  off: "bg-rose-500",
+  on: "bg-emerald-600 dark:bg-emerald-400",
+  off: "bg-rose-500 dark:bg-rose-400",
   neutral: "bg-neutral-400",
 };
 

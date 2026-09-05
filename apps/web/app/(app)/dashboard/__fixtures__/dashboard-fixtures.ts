@@ -17,6 +17,13 @@ export const dashboardSummaryFixture: DashboardSummary = {
   revenue_at_risk_minor: 48200000,
   revenue_recovered_minor: 31600000,
   baseline_recovered_minor: 23400000,
+  baseline_assumption: {
+    kind: "MODELLED_COUNTERFACTUAL",
+    naive_recovery_rate: 0.4,
+    naive_actions: ["RETRY_SAME_METHOD", "WAIT"],
+    description:
+      "Modelled counterfactual, not a measured control group. Where the naive policy would have chosen the same action RevLoop did (RETRY_SAME_METHOD or WAIT), it is credited with the same expected recovery; otherwise it is assumed to recover 40% of the amount at risk. No untreated holdout exists in this dataset, so this is an assumption, not an observation.",
+  },
   incremental_recovered_minor: 8200000,
   recovery_rate: 0.655602,
   active_cases: 47,
@@ -64,6 +71,13 @@ export const emptyDashboardSummaryFixture: DashboardSummary = {
   revenue_at_risk_minor: 0,
   revenue_recovered_minor: 0,
   baseline_recovered_minor: 0,
+  baseline_assumption: {
+    kind: "MODELLED_COUNTERFACTUAL",
+    naive_recovery_rate: 0.4,
+    naive_actions: ["RETRY_SAME_METHOD", "WAIT"],
+    description:
+      "Modelled counterfactual, not a measured control group. Where the naive policy would have chosen the same action RevLoop did (RETRY_SAME_METHOD or WAIT), it is credited with the same expected recovery; otherwise it is assumed to recover 40% of the amount at risk. No untreated holdout exists in this dataset, so this is an assumption, not an observation.",
+  },
   incremental_recovered_minor: 0,
   recovery_rate: 0,
   active_cases: 0,

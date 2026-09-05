@@ -37,7 +37,14 @@ export function RecoveryTable({ items }: RecoveryTableProps) {
   const router = useRouter();
 
   return (
-    <div className="overflow-x-auto">
+    // `relative` is load-bearing, not cosmetic. The <caption> below uses
+    // Tailwind's `sr-only`, which is `position: absolute`; an absolutely
+    // positioned box is clipped by an `overflow` ancestor only when that
+    // ancestor is also its containing block. With this wrapper static, the
+    // caption escaped the scroll container, was laid out at document x ~1231,
+    // and gave the whole page a horizontal scrollbar on a 390px viewport --
+    // while the table itself had been scrolling correctly all along.
+    <div className="relative overflow-x-auto">
       <table className="w-full min-w-[72rem] border-collapse text-sm">
         <caption className="sr-only">
           Recovery opportunities, ordered by the selected sort

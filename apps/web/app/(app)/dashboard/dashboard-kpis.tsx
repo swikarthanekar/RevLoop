@@ -1,4 +1,7 @@
-import type { DashboardSummary } from "@/app/(app)/dashboard/dashboard-types";
+import type {
+  BaselineAssumption,
+  DashboardSummary,
+} from "@/app/(app)/dashboard/dashboard-types";
 import {
   formatCount,
   formatDuration,
@@ -10,8 +13,8 @@ import { AnimatedMoney } from "@/components/money/animated-money";
 type KpiAccent = "risk" | "recovered" | "neutral";
 
 const ACCENT_BAR: Record<KpiAccent, string> = {
-  risk: "bg-amber-500",
-  recovered: "bg-emerald-600",
+  risk: "bg-amber-500 dark:bg-amber-400",
+  recovered: "bg-emerald-600 dark:bg-emerald-400",
   neutral: "bg-neutral-400",
 };
 
@@ -24,6 +27,8 @@ interface KpiCardProps {
   /** When set, the value tweens between backend-provided snapshots instead of
    * rendering static text -- used for money figures a demo can watch move. */
   animatedMoney?: { amountMinor: number; currency: string };
+  /** Server-supplied disclosure for a figure that is modelled, not measured. */
+  assumption?: BaselineAssumption | null;
 }
 
 function KpiCard({
@@ -32,6 +37,7 @@ function KpiCard({
   context,
   accent = "neutral",
   animatedMoney,
+  assumption,
 }: KpiCardProps) {
   return (
     <div className="relative overflow-hidden rounded-lg border border-line bg-surface p-5">
@@ -55,6 +61,16 @@ function KpiCard({
           </span>
         )}
         <span className="mt-1 block text-sm text-ink-muted">{context}</span>
+        {assumption ? (
+          <details className="group mt-2">
+            <summary className="cursor-pointer list-none text-xs font-medium text-warning-ink underline decoration-dotted underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500">
+              Modelled, not measured — how this is derived
+            </summary>
+            <p className="mt-1.5 text-xs leading-relaxed text-ink-muted">
+              {assumption.description}
+            </p>
+          </details>
+        ) : null}
       </dd>
     </div>
   );
@@ -114,6 +130,10 @@ export function DashboardKpis({ summary }: DashboardKpisProps) {
           value={safeMoney(summary.incremental_recovered_minor, currency)}
           context={`Baseline ${safeMoney(summary.baseline_recovered_minor, currency)}`}
           accent="recovered"
+          // The one KPI on this dashboard that is not a measurement. The
+          // disclosure text and the rate both come from the server, so they
+          // cannot drift from the constant the calculation actually uses.
+          assumption={summary.baseline_assumption}
         />
       </dl>
 

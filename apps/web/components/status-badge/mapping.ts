@@ -42,8 +42,8 @@ export function getRecoveryCaseStatusPresentation(
 
 export const STATUS_TONE_CLASSES: Record<StatusTone, string> = {
   neutral: "border-neutral-300 bg-neutral-50 text-neutral-700",
-  info: "border-sky-200 bg-sky-50 text-sky-800",
-  success: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  warning: "border-amber-200 bg-amber-50 text-amber-900",
-  danger: "border-rose-200 bg-rose-50 text-rose-800",
+  info: "border-info-border bg-info-surface text-info-ink",
+  success: "border-success-border bg-success-surface text-success-ink",
+  warning: "border-warning-border bg-warning-surface text-warning-ink",
+  danger: "border-danger-border bg-danger-surface text-danger-ink",
 };

@@ -26,6 +26,18 @@ export const selectedCandidateFixture: RecommendationCandidate = {
   policy_eligible: true,
   requires_approval: false,
   policy_reasons: [],
+  execution_mode: "EXECUTABLE",
+  advisory_reason_code: null,
+  advisory_reason: null,
+  // Reconciles exactly: 409918 - 200 - 0 - 7218 - 0 = 402500.
+  erv_breakdown: {
+    expected_recovered_minor: 409918,
+    action_cost_minor: 200,
+    fatigue_penalty_minor: 0,
+    operational_risk_penalty_minor: 7218,
+    delay_penalty_minor: 0,
+    expected_value_minor: 402500,
+  },
   factors: [
     { code: "ACTIVE_UPI_DOWNTIME", impact: "HIGH", source: "RAZORPAY_DOWNTIME" },
   ],
@@ -40,6 +52,33 @@ export const blockedCandidateFixture: RecommendationCandidate = {
   policy_eligible: false,
   requires_approval: false,
   policy_reasons: ["ACTIVE_PAYMENT_RAIL_DOWNTIME"],
+  execution_mode: "ADVISORY",
+  advisory_reason_code: "NO_AUTONOMOUS_DEBIT_CAPABILITY",
+  advisory_reason:
+    "RevLoop holds no mandate or saved payment token for this customer, so it cannot re-attempt the original payment without the customer authorizing it again \u2014 your checkout owns that retry. RevLoop executes the highest-ranked action it can carry out itself.",
+  factors: [],
+};
+
+/**
+ * The model's top choice is an action RevLoop does not execute.
+ *
+ * Kept as its own fixture because this is the shape that produced the
+ * production defect: rank 1 advisory, so a naive "selected = rank 1" read
+ * offered an Execute button that always returned 422.
+ */
+export const advisoryTopRankedCandidateFixture: RecommendationCandidate = {
+  action_type: "RETRY_SAME_METHOD",
+  rank: 1,
+  success_probability: 0.644,
+  expected_recovered_minor: 643882,
+  expected_value_minor: 641782,
+  policy_eligible: true,
+  requires_approval: false,
+  policy_reasons: [],
+  execution_mode: "ADVISORY",
+  advisory_reason_code: "NO_AUTONOMOUS_DEBIT_CAPABILITY",
+  advisory_reason:
+    "RevLoop holds no mandate or saved payment token for this customer, so it cannot re-attempt the original payment without the customer authorizing it again \u2014 your checkout owns that retry. RevLoop executes the highest-ranked action it can carry out itself.",
   factors: [],
 };
 
@@ -125,6 +164,7 @@ export const recommendedCaseFixture: CaseDetail = {
     feature_schema_version: "recovery_features_v1",
     selected_action: "REQUEST_ALTERNATE_PAYMENT_METHOD",
     confidence: 0.87,
+    top_ranked_action: "REQUEST_ALTERNATE_PAYMENT_METHOD",
     candidates: [selectedCandidateFixture, blockedCandidateFixture],
     structured_explanation: {
       summary:

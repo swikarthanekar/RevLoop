@@ -31,7 +31,7 @@ export function CaseMutationBanner({
     <div className="space-y-2">
       {mutation.conflict ? (
         <div
-          className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+          className="rounded-md border border-warning-border bg-warning-surface p-3 text-sm text-warning-ink"
           role="status"
         >
           <p className="font-medium">This case changed</p>

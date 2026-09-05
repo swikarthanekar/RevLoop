@@ -37,3 +37,6 @@ export function isDashboardEmpty(summary: DashboardSummary): boolean {
     summary.failure_breakdown.length === 0
   );
 }
+
+export type BaselineAssumption =
+  components["schemas"]["BaselineAssumption"];

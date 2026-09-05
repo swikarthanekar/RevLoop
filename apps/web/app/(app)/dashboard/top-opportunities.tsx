@@ -41,7 +41,7 @@ export function TopOpportunities({ items, unavailable }: TopOpportunitiesProps) 
           There are no open recovery opportunities to review.
         </SectionEmptyNote>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full min-w-[46rem] border-collapse text-sm">
             <caption className="sr-only">
               Top recovery opportunities ranked by priority score

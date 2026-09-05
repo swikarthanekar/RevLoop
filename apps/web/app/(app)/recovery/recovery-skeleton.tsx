@@ -25,7 +25,7 @@ interface RecoveryTableSkeletonProps {
  */
 export function RecoveryTableSkeleton({ rows = 8 }: RecoveryTableSkeletonProps) {
   return (
-    <div className="overflow-x-auto" aria-busy="true">
+    <div className="relative overflow-x-auto" aria-busy="true">
       <span className="sr-only">Loading recovery cases</span>
       <table className="w-full min-w-[72rem] border-collapse text-sm">
         <caption className="sr-only">Loading recovery opportunities</caption>

@@ -9,14 +9,40 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.demo.constants import DEMO_SOURCE_LABEL
-from app.repositories.analytics_repo import AnalyticsRepository
+from app.repositories.analytics_repo import (
+    NAIVE_BASELINE_ACTIONS,
+    NAIVE_BASELINE_RECOVERY_RATE,
+    AnalyticsRepository,
+)
 from app.schemas.common import DashboardSourceFilter
 from app.schemas.dashboard import (
     ActionEffectivenessRow,
+    BaselineAssumption,
     DashboardSummaryResponse,
     FailureBreakdownRow,
     RecoveryTrendPoint,
 )
+
+
+def _baseline_assumption() -> BaselineAssumption:
+    """Describe the counterfactual behind `baseline_recovered_minor`.
+
+    Built from the same constants the calculation uses, so the disclosure and
+    the number can never disagree.
+    """
+    rate = NAIVE_BASELINE_RECOVERY_RATE
+    return BaselineAssumption(
+        naive_recovery_rate=float(rate),
+        naive_actions=list(NAIVE_BASELINE_ACTIONS),
+        description=(
+            "Modelled counterfactual, not a measured control group. Where the "
+            "naive policy would have chosen the same action RevLoop did "
+            f"({' or '.join(NAIVE_BASELINE_ACTIONS)}), it is credited with the "
+            "same expected recovery; otherwise it is assumed to recover "
+            f"{rate:.0%} of the amount at risk. No untreated holdout exists in "
+            "this dataset, so this is an assumption, not an observation."
+        ),
+    )
 
 
 def _recovery_rate(recovered_minor: int, at_risk_minor: int) -> float:
@@ -93,6 +119,7 @@ class AnalyticsService:
             revenue_recovered_minor=aggregates.revenue_recovered_minor,
             baseline_recovered_minor=aggregates.baseline_recovered_minor,
             incremental_recovered_minor=incremental,
+            baseline_assumption=_baseline_assumption(),
             recovery_rate=_recovery_rate(
                 aggregates.revenue_recovered_minor,
                 aggregates.revenue_at_risk_minor,
