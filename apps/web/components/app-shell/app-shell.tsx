@@ -8,6 +8,7 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   return (
     <div className="flex min-h-screen bg-canvas text-ink">
+      {/* Below `md` the sidebar is replaced by MobileNav in the top bar. */}
       <div className="hidden md:flex">
         <Sidebar />
       </div>

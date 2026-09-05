@@ -136,7 +136,7 @@ export function RecoveryFilters({
           {minAmountInvalid ? (
             <p
               id="recovery-min-amount-hint"
-              className="mt-1 text-xs text-amber-700"
+              className="mt-1 text-xs text-warning-ink"
             >
               Enter a whole rupee amount. This filter is ignored until then.
             </p>

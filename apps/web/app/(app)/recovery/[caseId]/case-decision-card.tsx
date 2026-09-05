@@ -3,6 +3,8 @@ import {
   humanizeEnumLabel,
   safeMoney,
 } from "@/app/(app)/recovery/recovery-format";
+import { ErvWaterfall } from "@/app/(app)/simulator/erv-waterfall";
+import { AdvisoryNotice } from "@/app/(app)/recovery/[caseId]/advisory-notice";
 import {
   CaseSection,
   DefinitionRow,
@@ -61,6 +63,8 @@ export function CaseDecisionCard({
         {humanizeEnumLabel(analysis.selected_action)}
       </p>
 
+      <AdvisoryNotice analysis={analysis} candidates={analysis.candidates} />
+
       <dl className="mt-3">
         <DefinitionRow label="Estimated recovery probability">
           <span className="tabular-nums">
@@ -85,9 +89,42 @@ export function CaseDecisionCard({
         </DefinitionRow>
       </dl>
 
+      {/* Binds the figures above to the action the CTA submits, WITHOUT
+          repeating the action name as its own text node -- a second isolated
+          copy of the same label makes every exact-text query on this card
+          ambiguous. The name appears once, in the heading. */}
       <p className="mt-2 text-[11px] text-ink-muted">
-        Probability is a model estimate, not a guarantee.
+        Probability is a model estimate, not a guarantee. Every figure above
+        describes the recommended action named at the top of this card, which is
+        the action the control below submits.
       </p>
+
+      {/* The components are only present when they were persisted AND they
+          reconcile with the stored total; the server withholds them otherwise
+          rather than showing arithmetic that does not add up. */}
+      {selectedCandidate?.erv_breakdown ? (
+        <div className="mt-3">
+          <ErvWaterfall
+            currency={currency}
+            expectedRecoveredMinor={
+              selectedCandidate.erv_breakdown.expected_recovered_minor
+            }
+            actionCostMinor={selectedCandidate.erv_breakdown.action_cost_minor}
+            fatiguePenaltyMinor={
+              selectedCandidate.erv_breakdown.fatigue_penalty_minor
+            }
+            operationalRiskPenaltyMinor={
+              selectedCandidate.erv_breakdown.operational_risk_penalty_minor
+            }
+            delayPenaltyMinor={
+              selectedCandidate.erv_breakdown.delay_penalty_minor
+            }
+            expectedValueMinor={
+              selectedCandidate.erv_breakdown.expected_value_minor
+            }
+          />
+        </div>
+      ) : null}
 
       <div className="mt-4">
         <h3 className="text-xs font-medium uppercase tracking-wide text-ink-muted">

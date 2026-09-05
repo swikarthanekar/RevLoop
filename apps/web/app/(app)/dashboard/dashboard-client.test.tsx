@@ -262,7 +262,7 @@ describe("DashboardClient", () => {
     const table = await screen.findByRole("table");
     expect(within(table).getByText("Acme Learning")).toBeInTheDocument();
 
-    const row = screen.getByRole("row", { name: /Acme Learning/ });
+    const row = await screen.findByRole("row", { name: /Acme Learning/ });
     expect(
       within(row).getByText(formatMoney(499900, "INR")),
     ).toBeInTheDocument();
@@ -290,7 +290,7 @@ describe("DashboardClient", () => {
     expect(averageStat).not.toBeNull();
     expect(within(averageStat as HTMLElement).getByText("—")).toBeInTheDocument();
 
-    const unscoredRow = screen.getByRole("row", { name: /Northwind/ });
+    const unscoredRow = await screen.findByRole("row", { name: /Northwind/ });
     expect(within(unscoredRow).getAllByText("—")).toHaveLength(2);
   });
 
@@ -365,5 +365,23 @@ describe("DashboardClient", () => {
       expect(fetchImpl.mock.calls.length).toBeGreaterThan(initialCalls);
     });
     expect(await screen.findByText("Revenue at Risk")).toBeInTheDocument();
+  });
+});
+
+describe("modelled figures are disclosed as modelled", () => {
+  it("labels Incremental vs Baseline as a modelled counterfactual", async () => {
+    // Every other KPI on this dashboard reconciles exactly against the
+    // underlying cases. This one rests on an assumed 40% naive recovery rate
+    // with no untreated holdout, so it must not read as a measurement.
+    const { client } = happyPathClient();
+    render(<DashboardClient apiClient={client} />);
+
+    expect(await screen.findByText("Incremental vs Baseline")).toBeInTheDocument();
+    expect(screen.getByText(/Modelled, not measured/i)).toBeInTheDocument();
+
+    // The explanation is served by the backend, not written into UI copy, so
+    // it cannot drift from the constant the calculation uses.
+    expect(screen.getByText(/not a measured control group/i)).toBeInTheDocument();
+    expect(screen.getByText(/40%/)).toBeInTheDocument();
   });
 });

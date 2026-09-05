@@ -6,6 +6,7 @@ import { ApiClient } from "@/lib/api/api-client";
 import { createAccessTokenProvider } from "@/lib/auth/token-provider";
 import { useAuthSession } from "@/lib/auth/session";
 import { ENVIRONMENT_BADGE_TEXT, getApiBaseUrl, isSupabaseConfigured } from "@/lib/config/public";
+import { MobileNav } from "@/components/app-shell/mobile-nav";
 import { ThemeToggle } from "@/components/app-shell/theme-toggle";
 
 type HealthState = "unknown" | "connected" | "unavailable";
@@ -16,7 +17,7 @@ interface HealthResponse {
 
 function EnvironmentBadge() {
   return (
-    <span className="rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900">
+    <span className="rounded-md border border-warning-border bg-warning-surface px-2 py-1 text-xs font-medium text-warning-ink">
       {ENVIRONMENT_BADGE_TEXT}
     </span>
   );
@@ -116,13 +117,24 @@ function roleLabel(role: string): string {
 
 export function TopBar() {
   return (
-    <header className="flex items-center justify-between border-b border-line bg-surface px-4 py-3">
-      <div className="flex items-center gap-3">
-        <span className="text-sm font-medium text-ink">Merchant demo workspace</span>
+    // `relative` anchors the mobile nav panel, which drops out of this header.
+    // The bar wraps rather than overflowing on narrow viewports.
+    <header className="relative flex flex-wrap items-center justify-between gap-2 border-b border-line bg-surface px-4 py-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <MobileNav />
+        {/* The workspace label is the first thing to go on a phone; the
+            environment badge is not, because a reviewer must always be able to
+            see that this is demo data in Razorpay Test Mode. */}
+        <span className="hidden text-sm font-medium text-ink sm:inline">
+          Merchant demo workspace
+        </span>
         <EnvironmentBadge />
       </div>
-      <div className="flex items-center gap-3">
-        <ApiHealthIndicator />
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Health is diagnostic detail, not something a phone screen needs. */}
+        <span className="hidden sm:inline">
+          <ApiHealthIndicator />
+        </span>
         <ThemeToggle />
         <UserMenu />
       </div>

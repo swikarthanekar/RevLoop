@@ -3,6 +3,7 @@ import {
   humanizeEnumLabel,
   safeMoney,
 } from "@/app/(app)/recovery/recovery-format";
+import { AdvisoryChip } from "@/app/(app)/recovery/[caseId]/advisory-notice";
 import { CaseSection } from "@/app/(app)/recovery/[caseId]/case-section";
 import type { RecommendationCandidate } from "@/app/(app)/recovery/[caseId]/case-types";
 
@@ -47,7 +48,7 @@ export function CaseCandidatesTable({
       title="Candidate action comparison"
       headingId="case-candidates-heading"
     >
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full min-w-[56rem] border-collapse text-sm">
           <caption className="sr-only">
             Candidate recovery actions ranked by the backend analysis run
@@ -96,6 +97,15 @@ export function CaseCandidatesTable({
                         Selected
                       </span>
                     ) : null}
+                    {candidate.execution_mode === "ADVISORY" ? (
+                      <AdvisoryChip />
+                    ) : null}
+                    {candidate.execution_mode === "ADVISORY" &&
+                    candidate.advisory_reason ? (
+                      <span className="mt-1 block text-xs text-ink-muted">
+                        {candidate.advisory_reason}
+                      </span>
+                    ) : null}
                   </th>
                   <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-ink">
                     {formatRate(candidate.success_probability)}
@@ -115,7 +125,7 @@ export function CaseCandidatesTable({
                           : ""}
                       </span>
                     ) : (
-                      <span className="text-amber-800">
+                      <span className="text-warning-ink">
                         <span className="font-medium">Blocked</span>
                         {candidate.policy_reasons.length > 0
                           ? `: ${candidate.policy_reasons

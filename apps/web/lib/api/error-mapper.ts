@@ -32,6 +32,50 @@ const CODE_GUIDANCE: Record<string, ErrorPresentation> = {
     message: "The case changed while this request was in progress.",
     guidance: "Refresh and review the latest case state before retrying.",
   },
+  // Reaching this now means a client submitted an action the server does not
+  // execute — capability-aware selection should prevent it. It is mapped
+  // anyway: the generic 422 fallback rendered "Validation failed — The request
+  // could not be validated. Review the input and try again" on a form with no
+  // input, which told the user nothing and invited them to press the same
+  // button again.
+  ACTION_NOT_EXECUTABLE: {
+    title: "RevLoop does not perform this action",
+    message:
+      "This action is a recommendation RevLoop hands to your systems, not one it carries out itself.",
+    guidance:
+      "Pick an action RevLoop executes, or re-analyze the case to get a fresh recommendation.",
+  },
+  ACTION_NOT_IN_ANALYSIS: {
+    title: "Recommendation is out of date",
+    message: "This action is not part of the case's current analysis run.",
+    guidance: "Refresh the case to load the current recommendation.",
+  },
+  CASE_ALREADY_RESOLVED: {
+    title: "Case already resolved",
+    message: "This case has reached a terminal state and accepts no further actions.",
+    guidance: "Refresh to see the final outcome.",
+  },
+  ACTION_NOT_PENDING_APPROVAL: {
+    title: "Nothing left to approve",
+    message: "This action is no longer awaiting approval.",
+    guidance: "Refresh the case to see its current state.",
+  },
+  ROLE_NOT_ALLOWED: {
+    title: "Insufficient permission",
+    message: "Your role cannot perform this operation.",
+    guidance: "Ask an operator or admin to complete it.",
+  },
+  DEMO_RESET_NOT_ENABLED: {
+    title: "Demo reset is switched off",
+    message: "Reset rebuilds the demo tenant and is disabled on this deployment.",
+    guidance: "No data was changed. Enable DEMO_RESET_ENABLED to allow it.",
+  },
+  MODEL_UNAVAILABLE_AND_NO_FALLBACK: {
+    title: "Model unavailable",
+    message: "The recovery model could not score this case.",
+    guidance:
+      "No recommendation was recorded and the case is unchanged. Try again shortly.",
+  },
 };
 
 const STATUS_FALLBACKS: Record<number, Omit<ErrorPresentation, "guidance"> & { guidance: string }> = {
@@ -56,9 +100,12 @@ const STATUS_FALLBACKS: Record<number, Omit<ErrorPresentation, "guidance"> & { g
     guidance: "Refresh before retrying.",
   },
   422: {
-    title: "Validation failed",
-    message: "The request could not be validated.",
-    guidance: "Review the input and try again.",
+    // Most 422s here are server-side rules rejecting a request, not a
+    // malformed form. "Review the input" was actively misleading on screens
+    // with no input at all.
+    title: "Request was rejected",
+    message: "The server did not accept this request in the case's current state.",
+    guidance: "Refresh the case to see the latest state before trying again.",
   },
   429: {
     title: "Rate limited",

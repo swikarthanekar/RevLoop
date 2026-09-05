@@ -74,7 +74,7 @@ export function AuditTimelineEntry({ entry }: AuditTimelineEntryProps) {
         {entry.summary?.trim() ? (
           <p
             className={`mt-1 text-sm ${
-              isWarning ? "text-rose-900" : "text-ink"
+              isWarning ? "text-danger-ink" : "text-ink"
             }`}
           >
             {entry.summary}

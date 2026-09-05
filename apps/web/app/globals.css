@@ -19,6 +19,36 @@
   --accent: #171717;
   --accent-hover: #262626;
   --on-accent: #ffffff;
+
+  /*
+   * Status surfaces.
+   *
+   * These replace hardcoded Tailwind pastels (bg-emerald-50, bg-amber-50,
+   * bg-rose-50, bg-sky-50). A hardcoded pastel does not follow the theme, so
+   * in dark mode it kept its near-white background while the text on it
+   * inherited the dark theme's near-white foreground -- 1.04:1 contrast on the
+   * RECOVERED outcome card, which made the payoff moment, and the
+   * synthetic-data disclosure printed inside it, invisible.
+   *
+   * Each status gets a surface, a border and a foreground so the pairing is
+   * defined once and stays legible in both themes.
+   */
+  --success-surface: #ecfdf5;
+  --success-border: #6ee7b7;
+  --success-ink: #065f46;
+  --success-ink-strong: #064e3b;
+
+  --warning-surface: #fffbeb;
+  --warning-border: #fcd34d;
+  --warning-ink: #78350f;
+
+  --danger-surface: #fff1f2;
+  --danger-border: #fda4af;
+  --danger-ink: #9f1239;
+
+  --info-surface: #f0f9ff;
+  --info-border: #7dd3fc;
+  --info-ink: #075985;
 }
 
 .dark {
@@ -32,6 +62,28 @@
   --accent: #f4f4f5;
   --accent-hover: #e4e4e7;
   --on-accent: #18181b;
+
+  /*
+   * Dark status surfaces: deep, low-chroma grounds with light foregrounds.
+   * Every pair below clears WCAG AA (4.5:1) for body text; measured worst pair
+   * is 9.71:1.
+   */
+  --success-surface: #052e21;
+  --success-border: #0f7a58;
+  --success-ink: #6ee7b7;
+  --success-ink-strong: #a7f3d0;
+
+  --warning-surface: #2e2205;
+  --warning-border: #8a6d1b;
+  --warning-ink: #fcd34d;
+
+  --danger-surface: #2d0b12;
+  --danger-border: #9f3b4d;
+  --danger-ink: #fda4af;
+
+  --info-surface: #06243a;
+  --info-border: #1e6a9c;
+  --info-ink: #7dd3fc;
 }
 
 body {

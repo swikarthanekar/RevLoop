@@ -50,20 +50,20 @@ export function CaseOutcomeCard({ caseCore, outcome }: CaseOutcomeCardProps) {
         aria-live="polite"
         className={`rounded-md border p-4 ${
           isRecovered
-            ? "border-emerald-300 bg-emerald-50"
+            ? "border-success-border bg-success-surface"
             : "border-line bg-surface-hover"
         }`}
       >
         <p
           className={`text-sm font-semibold uppercase tracking-wide ${
-            isRecovered ? "text-emerald-900" : "text-ink"
+            isRecovered ? "text-success-ink" : "text-ink"
           }`}
         >
           {headline}
         </p>
 
         {isRecovered && outcome ? (
-          <p className="mt-1 text-3xl font-semibold tabular-nums text-emerald-950">
+          <p className="mt-1 text-3xl font-semibold tabular-nums text-success-ink-strong">
             {safeMoney(outcome.recovered_amount_minor, caseCore.currency)}
           </p>
         ) : null}

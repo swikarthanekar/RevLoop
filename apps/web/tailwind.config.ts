@@ -27,6 +27,29 @@ export default {
           hover: "var(--accent-hover)",
         },
         "on-accent": "var(--on-accent)",
+        // Status colors resolve through CSS variables so a single class works
+        // in both themes; see the note in app/globals.css.
+        success: {
+          surface: "var(--success-surface)",
+          border: "var(--success-border)",
+          ink: "var(--success-ink)",
+          "ink-strong": "var(--success-ink-strong)",
+        },
+        warning: {
+          surface: "var(--warning-surface)",
+          border: "var(--warning-border)",
+          ink: "var(--warning-ink)",
+        },
+        danger: {
+          surface: "var(--danger-surface)",
+          border: "var(--danger-border)",
+          ink: "var(--danger-ink)",
+        },
+        info: {
+          surface: "var(--info-surface)",
+          border: "var(--info-border)",
+          ink: "var(--info-ink)",
+        },
       },
     },
   },
