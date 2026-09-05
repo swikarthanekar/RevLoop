@@ -128,6 +128,23 @@ class StructuredExplanation(BaseModel):
     safety: list[str]
 
 
+class SelectedActionPolicy(BaseModel):
+    """The policy verdict the executor will reach for `selected_action`, now.
+
+    Distinct from the matching fields on `RecommendationCandidate`, which
+    record what policy decided when the analysis ran. Only this one predicts
+    what pressing Execute actually does, so it is what the UI must show when it
+    tells someone whether their click executes or files an approval request.
+
+    Absent when the organization has no policy row, in which case a client
+    should say nothing about approval rather than guess.
+    """
+
+    eligible: bool
+    requires_approval: bool
+    reasons: list[str]
+
+
 class CaseAnalysis(BaseModel):
     analysis_run_id: UUID
     model_version: str
@@ -142,6 +159,9 @@ class CaseAnalysis(BaseModel):
     top_ranked_action: str
     candidates: list[RecommendationCandidate]
     structured_explanation: StructuredExplanation
+    #: Re-evaluated on read, not read back from the recommendation row. See
+    #: `SelectedActionPolicy`.
+    selected_action_policy: SelectedActionPolicy | None = None
 
 
 class LatestAction(BaseModel):

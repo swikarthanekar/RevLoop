@@ -16,12 +16,14 @@ import type {
   CustomerActionResponse,
   LatestAction,
   RecommendationCandidate,
+  SelectedActionPolicy,
 } from "@/app/(app)/recovery/[caseId]/case-types";
 
 interface CaseActionPanelProps {
   caseCore: CaseCore;
   latestAction: LatestAction | null;
   selectedCandidate: RecommendationCandidate | null;
+  selectedActionPolicy: SelectedActionPolicy | null;
   controls: CaseControls;
   mutation: MutationState;
   customerAction: CustomerActionResponse | null;
@@ -51,6 +53,7 @@ export function CaseActionPanel({
   caseCore,
   latestAction,
   selectedCandidate,
+  selectedActionPolicy,
   controls,
   mutation,
   customerAction,
@@ -70,9 +73,26 @@ export function CaseActionPanel({
   const status = caseCore.status;
 
   // Backend-supplied policy verdict for the selected action. Never derived here.
-  const policyBlocked =
-    selectedCandidate !== null && !selectedCandidate.policy_eligible;
-  const requiresApproval = selectedCandidate?.requires_approval ?? false;
+  //
+  // Two verdicts exist and they answer different questions. The candidate's
+  // flags record what policy decided when the analysis ran; only
+  // `selectedActionPolicy` is re-evaluated against policy as it stands now,
+  // which is what the executor branches on. Describing the click therefore
+  // means reading the live verdict -- reading the stored one let the panel
+  // promise immediate execution for an action the executor then routed to
+  // approval. The stored flags remain the audit record and are still shown
+  // per-candidate in the candidates table.
+  //
+  // A server too old to send the live verdict falls back to the stored one,
+  // which is the previous behaviour rather than silence.
+  const policyBlocked = selectedActionPolicy
+    ? !selectedActionPolicy.eligible
+    : selectedCandidate !== null && !selectedCandidate.policy_eligible;
+  const requiresApproval = selectedActionPolicy
+    ? selectedActionPolicy.requires_approval
+    : (selectedCandidate?.requires_approval ?? false);
+  const policyReasons =
+    selectedActionPolicy?.reasons ?? selectedCandidate?.policy_reasons ?? [];
 
   const executeDisabled =
     isPending || policyBlocked || !hasAnalysis || selectedCandidate === null;
@@ -108,9 +128,9 @@ export function CaseActionPanel({
             {policyBlocked ? (
               <div className="rounded-md border border-warning-border bg-warning-surface p-3 text-sm text-warning-ink">
                 <p className="font-medium">Blocked by policy</p>
-                {selectedCandidate && selectedCandidate.policy_reasons.length > 0 ? (
+                {policyReasons.length > 0 ? (
                   <ul className="mt-1 list-disc space-y-0.5 pl-5">
-                    {selectedCandidate.policy_reasons.map((reason) => (
+                    {policyReasons.map((reason) => (
                       <li key={reason}>{humanizeEnumLabel(reason)}</li>
                     ))}
                   </ul>

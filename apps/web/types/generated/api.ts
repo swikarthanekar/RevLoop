@@ -527,6 +527,7 @@ export interface components {
             model_version: string;
             /** Selected Action */
             selected_action: string;
+            selected_action_policy?: components["schemas"]["SelectedActionPolicy"] | null;
             structured_explanation: components["schemas"]["StructuredExplanation"];
             /** Top Ranked Action */
             top_ranked_action: string;
@@ -1125,6 +1126,26 @@ export interface components {
             model_family: string;
             /** Model Version */
             model_version: string;
+        };
+        /**
+         * SelectedActionPolicy
+         * @description The policy verdict the executor will reach for `selected_action`, now.
+         *
+         *     Distinct from the matching fields on `RecommendationCandidate`, which
+         *     record what policy decided when the analysis ran. Only this one predicts
+         *     what pressing Execute actually does, so it is what the UI must show when it
+         *     tells someone whether their click executes or files an approval request.
+         *
+         *     Absent when the organization has no policy row, in which case a client
+         *     should say nothing about approval rather than guess.
+         */
+        SelectedActionPolicy: {
+            /** Eligible */
+            eligible: boolean;
+            /** Reasons */
+            reasons: string[];
+            /** Requires Approval */
+            requires_approval: boolean;
         };
         /** SelectedRecommendationResponse */
         SelectedRecommendationResponse: {

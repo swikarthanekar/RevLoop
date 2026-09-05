@@ -386,6 +386,15 @@ describe("CaseDetailClient — state-aware controls", () => {
     const blockedAnalysis = {
       ...recommendedCaseFixture.analysis!,
       selected_action: "RETRY_SAME_METHOD",
+      // The live verdict is what gates the control; the server derives it from
+      // the same case, so it agrees with the candidate's stored ineligibility.
+      // Leaving it at the fixture's eligible default would describe a payload
+      // the backend cannot produce.
+      selected_action_policy: {
+        eligible: false,
+        requires_approval: false,
+        reasons: ["ACTIVE_PAYMENT_RAIL_DOWNTIME"],
+      },
     };
     const { client } = readOnlyClient({
       ...recommendedCaseFixture,
@@ -908,5 +917,110 @@ describe("CaseDetailClient — WAITING_FOR_OUTCOME polling", () => {
     await advance(0);
 
     expect(getCalls(calls).length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("CaseDetailClient — the approval notice describes the real branch", () => {
+  /**
+   * `requires_approval` exists twice and the two answer different questions:
+   * the candidate's copy is what policy decided when the analysis ran, while
+   * `analysis.selected_action_policy` is re-evaluated on read and is what the
+   * executor branches on. The panel used to read the stored one, so it could
+   * promise immediate execution for an action the backend then routed to
+   * approval.
+   */
+  const NOTICE =
+    "This action requires approval. Submitting creates an approval request rather than executing immediately.";
+
+  it("shows the notice when the live verdict requires approval, even though the stored candidate does not", async () => {
+    const analysis = recommendedCaseFixture.analysis!;
+    const detail = makeCase({
+      analysis: {
+        ...analysis,
+        selected_action_policy: {
+          eligible: true,
+          requires_approval: true,
+          reasons: ["CONFIDENCE_BELOW_AUTO_THRESHOLD"],
+        },
+      },
+    });
+    const { client } = readOnlyClient(detail);
+    renderCase(client);
+    await findCaseHeading();
+
+    // The stored candidate still says no approval; the notice must not follow it.
+    expect(
+      analysis.candidates.find(
+        (candidate) => candidate.action_type === analysis.selected_action,
+      )!.requires_approval,
+    ).toBe(false);
+    expect(screen.getByText(NOTICE)).toBeInTheDocument();
+  });
+
+  it("hides the notice when the live verdict does not require approval, even though the stored candidate does", async () => {
+    const analysis = recommendedCaseFixture.analysis!;
+    const detail = makeCase({
+      analysis: {
+        ...analysis,
+        candidates: analysis.candidates.map((candidate) =>
+          candidate.action_type === analysis.selected_action
+            ? { ...candidate, requires_approval: true }
+            : candidate,
+        ),
+        selected_action_policy: {
+          eligible: true,
+          requires_approval: false,
+          reasons: [],
+        },
+      },
+    });
+    const { client } = readOnlyClient(detail);
+    renderCase(client);
+    await findCaseHeading();
+
+    expect(screen.queryByText(NOTICE)).not.toBeInTheDocument();
+  });
+
+  it("falls back to the stored candidate verdict when the server sends no live one", async () => {
+    const analysis = recommendedCaseFixture.analysis!;
+    const detail = makeCase({
+      analysis: {
+        ...analysis,
+        candidates: analysis.candidates.map((candidate) =>
+          candidate.action_type === analysis.selected_action
+            ? { ...candidate, requires_approval: true }
+            : candidate,
+        ),
+        selected_action_policy: null,
+      },
+    });
+    const { client } = readOnlyClient(detail);
+    renderCase(client);
+    await findCaseHeading();
+
+    expect(screen.getByText(NOTICE)).toBeInTheDocument();
+  });
+
+  it("blocks execution on the live eligibility verdict and lists its reasons", async () => {
+    const analysis = recommendedCaseFixture.analysis!;
+    const detail = makeCase({
+      analysis: {
+        ...analysis,
+        selected_action_policy: {
+          eligible: false,
+          requires_approval: false,
+          reasons: ["MAX_RECOVERY_ATTEMPTS_REACHED"],
+        },
+      },
+    });
+    const { client } = readOnlyClient(detail);
+    renderCase(client);
+    await findCaseHeading();
+
+    expect(screen.getByText("Blocked by policy")).toBeInTheDocument();
+    expect(screen.getByText("Max recovery attempts reached")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Execute recovery" }),
+    ).toBeDisabled();
   });
 });

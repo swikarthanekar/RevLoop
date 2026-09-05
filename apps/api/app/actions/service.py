@@ -25,6 +25,7 @@ from app.actions.keys import (
     build_payment_link_reference_id,
     build_request_fingerprint,
 )
+from app.actions.policy_context import build_execution_policy_context
 from app.actions.repository import RecoveryActionRepository
 from app.core.config import Settings
 from app.domain.capabilities import advisory_reason_text, is_executable
@@ -950,31 +951,21 @@ class RecoveryActionService:
         policy: MerchantPolicyConfig,
         auto_execute: bool,
     ) -> PolicyEvaluationContext:
-        attempts = self._count_recovery_attempts(case)
-        in_flight: set[RecoveryActionType] = set()
+        # Built in app.actions.policy_context rather than here so that the read
+        # path can ask the identical question. When the case detail response
+        # showed the stored analysis-time verdict and this showed a fresh one,
+        # the UI could promise immediate execution for an action that was then
+        # routed to approval.
         blocking = self._repo.get_blocking_payment_link_action(
             case_id=case.id,
             organization_id=case.organization_id,
         )
-        if blocking is not None:
-            # Any payment-link-mechanism action in flight blocks every other
-            # candidate that shares the mechanism, regardless of which one is
-            # actually blocking -- they would collide on the same Payment Link
-            # creation call for this case.
-            in_flight |= PAYMENT_LINK_MECHANISM_ACTIONS
-        return PolicyEvaluationContext(
-            action_type=RecoveryActionType(recommendation.action_type),
-            amount_at_risk_minor=case.amount_at_risk_minor,
-            recovery_attempts_so_far=attempts,
-            contacts_last_24h=0,
-            confidence=recommendation.confidence,
-            expected_value_minor=recommendation.expected_value_minor,
-            payment_link_data_sufficient=case.amount_at_risk_minor > 0 and bool(case.currency),
-            case_terminal=False,
-            provider_success_known=False,
-            equivalent_actions_in_flight=frozenset(in_flight),
-            auto_execution_requested=auto_execute,
-            cooldown_elapsed_minutes=999,
+        return build_execution_policy_context(
+            case=case,
+            recommendation=recommendation,
+            recovery_attempts_so_far=self._count_recovery_attempts(case),
+            payment_link_action_in_flight=blocking is not None,
+            auto_execute=auto_execute,
         )
 
     def _count_recovery_attempts(self, case: RecoveryCase) -> int:

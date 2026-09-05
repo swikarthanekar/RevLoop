@@ -175,6 +175,14 @@ export const recommendedCaseFixture: CaseDetail = {
       ],
       safety: ["Amount is below automatic-action limit"],
     },
+    // The verdict the executor will reach, re-evaluated on read. Agrees with
+    // `selectedCandidateFixture` here; tests that need them to disagree
+    // override this field.
+    selected_action_policy: {
+      eligible: true,
+      requires_approval: false,
+      reasons: [],
+    },
   },
   latest_action: null,
   outcome: null,
