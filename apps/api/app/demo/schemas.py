@@ -9,6 +9,7 @@ simulation output must not read like real recovered revenue.
 
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
@@ -82,3 +83,27 @@ class DemoResetResponse(BaseModel):
     reset_performed: bool
     organization_id: str
     recovery_case_count: int
+    #: Externally provisioned `user_profiles` rows carried across the reset.
+    #: Reported so an operator can see that hand-provisioned accounts (the
+    #: signed-in demo user included) survived, rather than having to check by
+    #: signing in again and hoping.
+    preserved_user_profiles: int = 0
+
+
+class DemoBatchCachedResponse(BaseModel):
+    """A stored policy simulation, with the provenance of the run itself.
+
+    `computed_at` and `duration_seconds` are shown to the reader on purpose. A
+    number presented without saying when it was produced invites the assumption
+    that it is a fixture; stating it, and offering a recompute, answers that
+    before it is asked.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    evaluation: DemoBatchResponse
+    computed_at: datetime
+    duration_seconds: float
+    #: True when this response triggered a fresh computation rather than
+    #: reading the cache.
+    recomputed: bool = False

@@ -239,6 +239,7 @@ mirrored into Vercel.
 | `DATABASE_URL` | Supabase session pooler URL | secret |
 | `APP_ENV` | `development` or `production` | see [section 10](#10-demo-reset). `development` also keeps the `DEV_AUTH_*` bearer tokens working alongside Supabase, which is convenient while rehearsing; `production` requires the frontend's Supabase config and a provisioned admin user (section 2.5) for anything to authenticate, `/demo/reset` included |
 | `DEMO_MODE` | `true` | registers the demo routes |
+| `DEMO_RESET_ENABLED` | `false` | second, independent opt-in for the destructive `/demo/reset` under `APP_ENV=production`; not consulted otherwise. Leave `false` except for the moment you intend to rebuild the demo tenant — see [section 10](#10-demo-reset) |
 | `PUBLIC_APP_BASE_URL` | `https://<project>.vercel.app` | CORS origin |
 | `DEV_AUTH_USER_ID` | `bc9f0349-0af8-557e-9557-4bdaadda544d` | canonical demo identity; only used when `APP_ENV=development` |
 | `DEV_AUTH_ORGANIZATION_ID` | `82757dbc-e0d0-5285-8f26-7a9ab9837a24` | canonical demo tenant; only used when `APP_ENV=development` |
@@ -417,14 +418,30 @@ resolved server-side.
 ### 10.1 The environment combination that works
 
 `APP_ENV` accepts `development`, `test` or `production`. There is no `demo`
-value. `DEMO_MODE` is a separate switch that only controls route registration.
+value. Two separate switches gate the demo surface:
 
-| `APP_ENV` | `DEMO_MODE` | Result |
-| --- | --- | --- |
-| `development` | `true` | Demo routes exist; `Bearer dev-admin` resolves ADMIN. **Working demo, simplest to rehearse with.** |
-| `development` | `false` | Routes not registered → 404. |
-| `production` | `true` | Routes registered; a verified Supabase token for a `user_profiles` row with `role=ADMIN` (section 2.5) resolves ADMIN and can reset. `dev-admin` no longer works here — production selects `SupabaseAuthBackend`. |
-| `production` | `false` | No route to call. |
+- **`DEMO_MODE`** controls route *registration*. With it off, the demo paths are
+  not part of the application and answer a genuine 404.
+- **`DEMO_RESET_ENABLED`** controls the *destructive* reset under
+  `APP_ENV=production`, and nothing else. It is consulted only in production.
+
+Reset is gated twice on purpose. `DEMO_MODE` is on in the deployed environment
+so that the demo routes exist at all; reset is the one demo operation that
+deletes rows. Requiring an independent opt-in means the destructive path cannot
+be reached by flipping a flag that is already on for unrelated reasons, and
+switching the opt-in back off leaves the rest of the demo surface working.
+
+| `APP_ENV` | `DEMO_MODE` | `DEMO_RESET_ENABLED` | Result |
+| --- | --- | --- | --- |
+| `development` / `test` | `true` | *(not consulted)* | Demo routes exist; `Bearer dev-admin` resolves ADMIN; reset works. **Simplest to rehearse with.** |
+| `development` / `test` | `false` | *(not consulted)* | Routes not registered → 404. |
+| `production` | `true` | `false` *(default)* | Routes registered and `run-batch` works. Reset is **refused** with `403 DEMO_RESET_NOT_ENABLED`. |
+| `production` | `true` | `true` | Reset permitted for a verified Supabase token whose `user_profiles` row has `role=ADMIN` (section 2.5). `dev-admin` does not work here — production selects `SupabaseAuthBackend`. |
+| `production` | `false` | *(any)* | No route to call. |
+
+A refused reset is a typed `403` carrying `DEMO_RESET_NOT_ENABLED` or
+`DEMO_MODE_DISABLED`, never a `500`. If you see `500 INTERNAL_ERROR` from this
+endpoint, something else is wrong — read the logs rather than changing flags.
 
 Either working combination's route-level protections are identical: demo
 mode registration, server-resolved ADMIN role, and tenant scoping all apply
@@ -436,17 +453,52 @@ even though nothing enforces it. `APP_ENV=production` runs that validation
 (`Settings.validate_production_secrets`) and refuses to boot on a
 `dev-`-prefixed secret.
 
-### 10.2 Procedure
+### 10.2 What reset preserves
+
+Reset deletes and rebuilds the demo tenant, but it **carries externally
+provisioned `user_profiles` rows across the rebuild**, keyed on `auth_user_id`.
+
+The seed owns exactly three synthetic `auth_user_id` values
+(`SEED_MANAGED_AUTH_USER_IDS` in `app/demo/seed.py`). Any other profile row in
+the demo organization maps a real Supabase account onto the tenant and was
+provisioned by hand — the `demo@gmail.com` row, for instance. Those rows are
+captured before the delete and re-inserted after the reseed with their original
+`id`, `auth_user_id`, `role` and `created_at`, so an account keeps exactly the
+identity and permissions it had.
+
+Without this, a reset would delete the hand-provisioned row and reseed three
+*different* synthetic `auth_user_id`s, leaving the demo account authenticated
+but unauthorized: every request would answer `403 NO_ORGANIZATION_MEMBERSHIP`
+and the deployed app would be unusable until someone re-ran the provisioning
+SQL by hand.
+
+The response reports `preserved_user_profiles`, so you can confirm the rows
+survived without signing out and back in to find out.
+
+### 10.3 Procedure
+
+Local or `APP_ENV=development`:
 
 ```
-POST https://<service>.up.railway.app/api/v1/demo/reset
+POST http://localhost:8000/api/v1/demo/reset
 Authorization: Bearer dev-admin
 ```
 
-With `APP_ENV=production`, replace the header with a real Supabase access
-token for the provisioned admin user (obtain it by signing in at `/login`
-and reading it from the Supabase client session, e.g. via the browser
-devtools network tab on the `/api/v1/auth/me` request).
+Deployed, with `APP_ENV=production`:
+
+1. Set `DEMO_RESET_ENABLED=true` on the service and let it redeploy.
+2. Obtain a real Supabase access token for the provisioned admin user (sign in
+   at `/login` and read it from the Supabase client session, e.g. via the
+   browser devtools network tab on the `/api/v1/auth/me` request).
+3. ```
+   POST https://<service>.up.railway.app/api/v1/demo/reset
+   Authorization: Bearer <supabase-access-token>
+   ```
+4. Confirm the response reports `recovery_case_count: 100` and a
+   `preserved_user_profiles` count matching the number of accounts you
+   provisioned by hand (`1` for the standard single-account setup).
+5. Optionally set `DEMO_RESET_ENABLED` back to `false`, so the destructive path
+   is closed again during judging.
 
 The reset deletes and reseeds the demo tenant in a single transaction, so a
 failure rolls back rather than leaving a half-reset database.

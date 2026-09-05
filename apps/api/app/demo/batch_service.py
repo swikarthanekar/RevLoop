@@ -79,7 +79,12 @@ def run_demo_batch(case_count: int = DEMO_BATCH_CASE_COUNT) -> DemoBatchResponse
     return to_response(run_canonical_batch(case_count))
 
 
-def describe_reset(session: Session, reset_performed: bool) -> DemoResetResponse:
+def describe_reset(
+    session: Session,
+    reset_performed: bool,
+    *,
+    preserved_user_profiles: int = 0,
+) -> DemoResetResponse:
     """Summarise the restored canonical demo state."""
     case_count = int(
         session.execute(
@@ -93,6 +98,7 @@ def describe_reset(session: Session, reset_performed: bool) -> DemoResetResponse
         reset_performed=reset_performed,
         organization_id=str(DEMO_ORGANIZATION_ID),
         recovery_case_count=case_count,
+        preserved_user_profiles=preserved_user_profiles,
     )
 
 
