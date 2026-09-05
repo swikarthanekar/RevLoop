@@ -377,7 +377,26 @@ If a key is set it stays backend-only. No Gemini variable may become
 
 ## 9. Warm-up before a demo
 
-Manual, no scheduler or background pinger:
+### 9.1 Keeping the deployment warm unattended
+
+`GET /health` opens a session and runs `SELECT 1`, so calling it exercises the
+whole path a real request uses -- container, pool checkout, Supabase pooler
+connection -- and reports the result in the `database` field. Pointing a free
+external monitor (cron-job.org, UptimeRobot) at it every 5 minutes keeps that
+path warm for a visitor who arrives with nobody watching, which the manual
+warm-up below cannot do.
+
+The route always answers `200`, including when the database is unreachable, and
+reports the degradation as `"database": "unavailable"` instead. Railway probes
+this same path, so the status code has to mean "this container is serving": a
+`503` here would let a transient database blip restart or fail-deploy a
+container that is otherwise fine. Configure the monitor to alert on the
+`database` field rather than on the status code.
+
+### 9.2 Manual warm-up before a live demo
+
+Still worth doing immediately before presenting, whether or not a monitor is
+running:
 
 1. `GET https://<service>.up.railway.app/health` and wait for `200`.
 2. Open the Vercel URL and let the dashboard load.

@@ -45,3 +45,6 @@ npm-debug.log*
 # Model artifacts (local only)
 *.joblib
 *.pkl
+
+# Rendered copy of PITCH_SCRIPT.md, regenerated on demand.
+RevLoop-Demo-Script.pdf
