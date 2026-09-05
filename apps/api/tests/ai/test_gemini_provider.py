@@ -9,7 +9,10 @@ import pytest
 from pydantic import SecretStr
 
 from app.ai.errors import AIProviderRateLimitError, AIProviderTimeoutError
-from app.ai.gemini_provider import GeminiLLMProvider
+from app.ai.gemini_provider import (
+    GEMINI_MINIMUM_DEADLINE_SECONDS,
+    GeminiLLMProvider,
+)
 from app.ai.schemas import RecommendationExplanation
 from app.core.config import Settings
 from tests.ai.helpers import sample_explanation_input
@@ -140,10 +143,19 @@ def test_provider_error_does_not_retry() -> None:
     assert client.aio.models.call_count == 1
 
 
-def test_http_options_use_single_attempt_and_timeout() -> None:
+def test_http_options_use_single_attempt_and_a_valid_deadline() -> None:
+    """The transport deadline is floored at the provider's own minimum.
+
+    This test previously asserted `timeout == 3000`, which codified a bug: the
+    Gemini API rejects any client-set deadline below ten seconds with
+    `400 INVALID_ARGUMENT`, so a 3s deadline failed 100% of calls before the
+    model ran. The application's own wall-clock budget is enforced separately
+    by `asyncio.wait_for` and is unaffected -- see
+    `test_our_own_budget_is_independent_of_the_transport_deadline`.
+    """
     provider = GeminiLLMProvider(settings=_settings(gemini_timeout_seconds=3.0))
     options = provider._build_http_options()
-    assert options.timeout == 3000
+    assert options.timeout == int(GEMINI_MINIMUM_DEADLINE_SECONDS * 1000)
     assert options.retry_options is not None
     assert options.retry_options.attempts == 1
 
@@ -182,5 +194,7 @@ def test_lazy_client_uses_http_options(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert "http_options" in captured
     options = captured["http_options"]
-    assert options.timeout == 50
+    # Floored to the provider minimum rather than the tiny test budget, for the
+    # reason documented on `_build_http_options`.
+    assert options.timeout == int(GEMINI_MINIMUM_DEADLINE_SECONDS * 1000)
     assert options.retry_options.attempts == 1
