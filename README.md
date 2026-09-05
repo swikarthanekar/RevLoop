@@ -4,6 +4,7 @@
 
 | | |
 | --- | --- |
+| **Demo video** | **https://youtu.be/wDTBXWMQbn0** — 3:42, one case end to end |
 | **Live demo** | **https://revloop-bay.vercel.app** — sign in with **Continue as demo** |
 | **API** | https://revloop.up.railway.app ([health](https://revloop.up.railway.app/health) · [OpenAPI docs](https://revloop.up.railway.app/docs)) |
 | **Engineering decision log** | [AUDIT_RESPONSE.md](AUDIT_RESPONSE.md) — what an external audit found, and what we changed or deliberately kept |
