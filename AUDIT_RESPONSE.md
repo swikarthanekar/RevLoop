@@ -587,3 +587,71 @@ The remaining `rank == 1` occurrences are correct by intent and were left alone:
 `top_ranked_action` on case detail (which genuinely means rank 1), the audit
 summary line recording what the model ranked first, and the naive-baseline
 counterfactual in analytics.
+
+## 12. The approval flag: not a bypass, but the UI was promising the wrong thing
+
+**The report.** An action executed in production came back with a live Razorpay
+link and `status: SUCCEEDED`, no approver recorded, and `requires_approval` read
+as `true` -- while the case detail page had said beforehand *"This action
+requires approval. Submitting creates an approval request rather than executing
+immediately."* Since "Compliance Guardrails" is a headline claim, the question
+was whether an approval gate had been bypassed.
+
+**It is not a bypass.** `create_case_action` re-evaluates policy at submit time
+and branches on that result: `requires_approval` sends it to
+`_stage_pending_approval`, which writes `PENDING_APPROVAL` with a null approver
+and moves the case to `AWAITING_APPROVAL`. Only the other branch reaches
+`_execute_payment_link_now`, which is called with `approver_id=None` from this
+path and therefore writes `requires_approval=False` -- a line unchanged since it
+was first written (`git log -L` on it shows one commit). There is no code path
+that executes an action the live policy says needs approval, and none that can
+write `requires_approval=true` onto a succeeded action with a null approver.
+Two regression tests now hold both halves of that
+(`test_an_executed_action_never_claims_an_approval_it_did_not_get` asserts it
+across every executable seeded case).
+
+**But the UI's promise was genuinely wrong, and measurably so.**
+`requires_approval` exists twice and the two are different facts:
+
+* on `recovery_recommendations`, it is what policy decided **when the analysis
+  ran** -- a historical record;
+* the branch the executor takes comes from re-evaluating policy **at submit
+  time**, against the case as it stands now.
+
+The case detail response served only the first, and `case-action-panel.tsx` drew
+its approval notice from it. Nothing kept the two in step. Measured on the
+canned dataset production is still running -- seeded before recommendations came
+from real inference, where the seeder hand-wrote the flag as
+`amount > ₹10,000` instead of asking the policy engine -- **the two verdicts
+disagree on 10 of the 15 executable cases**, and on 175 of 277 recommendations
+overall. Every disagreement runs the same way: the stored flag says no approval,
+the live engine says `CONFIDENCE_BELOW_AUTO_THRESHOLD`. So on two thirds of
+production's executable cases the page shows no approval notice, Execute is
+pressed, and the case silently lands in `AWAITING_APPROVAL` instead of producing
+a payment link. Eligibility does not diverge (0 of 15), so this never surfaced
+as a 422.
+
+On a dataset reseeded with real inference the divergence is 0 of 60, because the
+flag then comes from the engine itself. That makes a reset sufficient *today*
+and useless as a guarantee: any edit to merchant policy after an analysis
+reintroduces it.
+
+**The fix.** `app/actions/policy_context.py` now holds the one construction of
+the policy question, and both paths use it: the executor to choose its branch,
+and the case detail response to serve `analysis.selected_action_policy`
+(`eligible`, `requires_approval`, `reasons`). The panel reads that verdict for
+both the approval notice and the blocked notice, falling back to the stored flag
+if a server does not send it. The stored per-candidate flags are unchanged and
+still shown in the candidates table -- they are the audit record of what the
+analysis decided, and rewriting them to match today's policy would destroy the
+thing that makes them worth keeping.
+
+**What could not be reproduced.** No code path and neither dataset produces the
+exact pair reported -- `requires_approval: true` on a `SUCCEEDED` action with a
+null approver. On the canned data the stored flag is `true` only when the amount
+exceeds the auto-action limit, and the engine fires the same rule on the same
+input, so those two always agree; the disagreements all run the other way. The
+most likely reading is that the `true` was the selected *candidate's* flag
+rather than the action row's -- the same stale field that drove the notice --
+but that is inference, not something reproduced, and it is recorded here as
+unresolved rather than tidied into the story.

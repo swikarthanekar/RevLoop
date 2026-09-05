@@ -215,6 +215,7 @@ export function CaseDetailClient({ caseId, apiClient }: CaseDetailClientProps) {
             caseCore={caseCore}
             latestAction={latest_action}
             selectedCandidate={selectedCandidate}
+            selectedActionPolicy={analysis?.selected_action_policy ?? null}
             controls={controls}
             mutation={mutation}
             customerAction={resolvedCustomerAction}

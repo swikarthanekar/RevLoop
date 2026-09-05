@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.actions.policy_context import evaluate_execution_policy
 from app.core.errors import ForbiddenError, NotFoundError
 from app.domain.capabilities import (
     advisory_reason_code,
@@ -38,6 +39,7 @@ from app.schemas.recovery_case import (
     RecoveryCaseDetailResponse,
     RecoveryCaseListItem,
     RecoveryCaseListResponse,
+    SelectedActionPolicy,
     SourceSubscription,
     SourceTransaction,
     StructuredExplanation,
@@ -66,7 +68,6 @@ def _build_structured_explanation(
     if recommendation.policy_reasons:
         safety.extend(str(reason) for reason in recommendation.policy_reasons)
     return StructuredExplanation(summary=summary, evidence=evidence, safety=safety)
-
 
 
 def _map_erv_breakdown(rec: RecoveryRecommendation) -> ERVBreakdownResponse | None:
@@ -141,6 +142,7 @@ def _map_recommendation(rec: RecoveryRecommendation) -> RecommendationCandidate:
 
 class RecoveryCaseService:
     def __init__(self, session: Session) -> None:
+        self._session = session
         self._repo = RecoveryCaseRepository(session)
 
     def list_cases(
@@ -335,6 +337,32 @@ class RecoveryCaseService:
             top_ranked_action=rank1.action_type,
             candidates=[_map_recommendation(rec) for rec in recommendations],
             structured_explanation=_build_structured_explanation(selected_row),
+            selected_action_policy=self._selected_action_policy(case, selected_row),
+        )
+
+    def _selected_action_policy(self, case, selected_row) -> SelectedActionPolicy | None:
+        """What the executor will decide for the selected action, asked now.
+
+        `selected_row.requires_approval` is the analysis-time verdict and is
+        kept as the audit record, but `create_case_action` re-evaluates policy
+        before choosing between executing and staging an approval request. The
+        UI has to describe that branch, so it needs this verdict rather than
+        the stored one.
+        """
+        decision = evaluate_execution_policy(
+            self._session,
+            case=case,
+            recommendation=selected_row,
+            # Matches how the Execute control submits: an operator pressing it
+            # is requesting automatic execution.
+            auto_execute=True,
+        )
+        if decision is None:
+            return None
+        return SelectedActionPolicy(
+            eligible=decision.eligible,
+            requires_approval=decision.requires_approval,
+            reasons=[reason.value for reason in decision.reasons],
         )
 
     def _build_latest_action(self, case_id: UUID, organization_id: UUID) -> LatestAction | None:

@@ -145,6 +145,19 @@ test.describe("critical recovery journey", () => {
     expect(selectedCandidate.requires_approval).toBe(true);
     expect(selectedCandidate.policy_reasons).toContain("AMOUNT_ABOVE_AUTO_ACTION_LIMIT");
 
+    // The verdict that governs the branch below is the one re-evaluated on
+    // read, not the flag frozen into the recommendation row. Asserting it here
+    // ties the notice the operator reads to the branch they actually get: the
+    // panel used to draw that notice from the stored flag, which meant it could
+    // promise an approval request for an action that executed immediately, or
+    // the reverse.
+    expect(analyzed.analysis.selected_action_policy.requires_approval).toBe(true);
+    await expect(
+      page.getByText(
+        "This action requires approval. Submitting creates an approval request rather than executing immediately.",
+      ),
+    ).toBeVisible();
+
     // --- Execute: the policy requires approval for this amount ------------
     const executeResponse = page.waitForResponse(
       (response) =>

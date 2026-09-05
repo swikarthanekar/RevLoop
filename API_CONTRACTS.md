@@ -251,12 +251,31 @@ Response:
       "summary": "Alternative payment is preferred because the failed rail is degraded.",
       "evidence": ["UPI rail degradation is active", "Customer recently paid successfully by card"],
       "safety": ["Amount is below automatic-action limit"]
+    },
+    "selected_action_policy": {
+      "eligible": true,
+      "requires_approval": false,
+      "reasons": []
     }
   },
   "latest_action": null,
   "outcome": null
 }
 ```
+
+`requires_approval` appears twice and the two are different facts. On a
+candidate it records what policy decided **when the analysis ran**, and is the
+audit record of that analysis. `selected_action_policy` re-evaluates policy for
+`selected_action` **at read time**, against the case as it stands now, using the
+same construction the executor uses to choose between executing immediately and
+filing an approval request (`app/actions/policy_context.py`).
+
+**A client describing what pressing Execute will do must read
+`selected_action_policy`, not the candidate.** The two disagree whenever policy
+changed after the analysis was persisted, and a client that reads the stored
+flag will promise an outcome the executor does not deliver. The field is
+`null` only when the organization has no policy row; a client should then say
+nothing about approval rather than guess.
 
 Errors:
 - `404 CASE_NOT_FOUND`;

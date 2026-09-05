@@ -12,6 +12,7 @@ export type RecommendationCandidate =
   components["schemas"]["RecommendationCandidate"];
 export type RecommendationFactor = components["schemas"]["RecommendationFactor"];
 export type StructuredExplanation = components["schemas"]["StructuredExplanation"];
+export type SelectedActionPolicy = components["schemas"]["SelectedActionPolicy"];
 export type LatestAction = components["schemas"]["LatestAction"];
 export type CaseOutcome = components["schemas"]["CaseOutcome"];
 export type SourceTransaction = components["schemas"]["SourceTransaction"];

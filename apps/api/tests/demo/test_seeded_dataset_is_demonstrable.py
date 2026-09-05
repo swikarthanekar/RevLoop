@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from decimal import Decimal
 
 import pytest
 from sqlalchemy import select
@@ -730,3 +731,199 @@ def test_executor_still_refuses_actions_that_were_not_selected(
     case, unselected_action = unselected_case
     with pytest.raises(StaleRecommendationError):
         submit(case, unselected_action)
+
+
+# --------------------------------------------------------------------------
+# The approval promise must match the branch actually taken
+# --------------------------------------------------------------------------
+
+
+def test_case_detail_predicts_the_execution_branch_the_executor_takes(
+    freshly_seeded: Engine,
+) -> None:
+    """The approval notice must describe what pressing Execute really does.
+
+    The case detail response used to report only the recommendation row's
+    `requires_approval` -- the verdict policy reached when the analysis ran --
+    while `create_case_action` re-evaluates policy at submit time and branches
+    on *that*. Nothing kept the two in step, so the UI could say "this executes
+    immediately" and the executor could file an approval request instead. On the
+    demo data seeded before recommendations came from real inference, the two
+    disagreed on 10 of the 15 executable cases, every one in that direction.
+
+    The divergence is driven here the way it happens in production -- by moving
+    the policy after the analysis was persisted, leaving the stored flag stale --
+    rather than by editing the flag, so the test exercises the real mechanism.
+    """
+    from app.actions.service import RecoveryActionService
+    from app.core.config import Settings
+    from app.domain.enums import AuditActorType
+    from app.models.merchant_policy import MerchantPolicy
+    from app.services.recovery_case_service import RecoveryCaseService
+
+    url = postgres_url()
+    assert url is not None
+    settings = Settings(
+        app_env="test",
+        demo_mode=True,
+        database_url=url,
+        razorpay_key_id="rzp_test_localstub",
+        razorpay_key_secret="localstubsecret",
+        _env_file=None,
+    )
+    factory = sessionmaker(bind=freshly_seeded, future=True)
+
+    # Raise the auto-execution confidence floor above every seeded candidate's
+    # confidence. Policy now requires approval for actions whose stored rows
+    # still say it does not.
+    with factory() as db:
+        policy = db.execute(
+            select(MerchantPolicy).where(MerchantPolicy.organization_id == DEMO_ORGANIZATION_ID)
+        ).scalar_one()
+        policy.minimum_auto_confidence = Decimal("0.999")
+        db.commit()
+
+    # Chosen by the property the assertions depend on, not by position:
+    # `_cases` issues an unordered SELECT, so an index would pick a different
+    # case depending on what ran before it in the session.
+    with factory() as db:
+        candidates = sorted(
+            (
+                case.id
+                for case in _cases(db, RecoveryCaseStatus.RECOMMENDED.value)
+                if not select_candidate_row(_recommendations(db, case)).requires_approval
+            ),
+            key=str,
+        )
+        assert candidates, (
+            "no RECOMMENDED case has a selected candidate whose stored flag says "
+            "approval is not required, so the divergence this test drives cannot "
+            "be observed"
+        )
+        case_id = candidates[0]
+
+    with factory() as db:
+        detail = RecoveryCaseService(db).get_case_detail(
+            case_id=case_id, organization_id=DEMO_ORGANIZATION_ID
+        )
+        analysis = detail.analysis
+        assert analysis is not None
+        stored = next(
+            candidate
+            for candidate in analysis.candidates
+            if candidate.action_type == analysis.selected_action
+        )
+        live = analysis.selected_action_policy
+        assert live is not None, "case detail must report the live policy verdict"
+        assert stored.requires_approval is False, (
+            "the stored analysis-time flag must stay as the analysis wrote it; "
+            "rewriting history would defeat the point of keeping both"
+        )
+        assert live.requires_approval is True, (
+            "the live verdict must reflect the policy as it stands now, not the "
+            "verdict frozen into the recommendation row"
+        )
+        assert "CONFIDENCE_BELOW_AUTO_THRESHOLD" in live.reasons
+        selected_action = analysis.selected_action
+        analysis_run_id = analysis.analysis_run_id
+
+    # Now submit, and confirm the live verdict -- not the stored flag -- is what
+    # the executor acted on.
+    with factory() as db:
+        service = RecoveryActionService(
+            db,
+            settings=settings,
+            razorpay_client=_mock_payment_link_client(),
+        )
+        result = service.create_case_action(
+            case_id=case_id,
+            organization_id=DEMO_ORGANIZATION_ID,
+            analysis_run_id=analysis_run_id,
+            action_type=RecoveryActionType(selected_action),
+            actor_type=AuditActorType.USER,
+            actor_id="seeded-dataset-test",
+        )
+        db.commit()
+        assert result.action.status == RecoveryActionStatus.PENDING_APPROVAL.value
+        assert result.case_status == RecoveryCaseStatus.AWAITING_APPROVAL
+        assert result.action.requires_approval is True
+        assert result.action.approved_by is None, (
+            "an action awaiting approval must not record an approver"
+        )
+
+
+def test_an_executed_action_never_claims_an_approval_it_did_not_get(
+    freshly_seeded: Engine,
+) -> None:
+    """`requires_approval` on an action row is a fact about that row's history.
+
+    An action that took the immediate-execution branch was, by definition, not
+    subject to approval: it must not be flagged as requiring one, because a row
+    reading `requires_approval=true` with `approved_by=null` and a terminal
+    success status is indistinguishable from an approval that was bypassed.
+    """
+    from app.actions.service import RecoveryActionService
+    from app.core.config import Settings
+    from app.domain.enums import AuditActorType
+
+    url = postgres_url()
+    assert url is not None
+    settings = Settings(
+        app_env="test",
+        demo_mode=True,
+        database_url=url,
+        razorpay_key_id="rzp_test_localstub",
+        razorpay_key_secret="localstubsecret",
+        _env_file=None,
+    )
+    factory = sessionmaker(bind=freshly_seeded, future=True)
+
+    with factory() as db:
+        cases = _cases(db, RecoveryCaseStatus.RECOMMENDED.value)
+        assert cases, "no RECOMMENDED cases: this test would vacuously pass"
+        targets = [
+            (
+                case.id,
+                case.current_analysis_run_id,
+                select_candidate_row(_recommendations(db, case)).action_type,
+            )
+            for case in cases
+        ]
+
+    executed = 0
+    for case_id, analysis_run_id, action_type in targets:
+        with factory() as db:
+            service = RecoveryActionService(
+                db,
+                settings=settings,
+                razorpay_client=_mock_payment_link_client(),
+            )
+            result = service.create_case_action(
+                case_id=case_id,
+                organization_id=DEMO_ORGANIZATION_ID,
+                analysis_run_id=analysis_run_id,
+                action_type=RecoveryActionType(action_type),
+                actor_type=AuditActorType.USER,
+                actor_id="seeded-dataset-test",
+            )
+            action = result.action
+            db.commit()
+
+            if action.status == RecoveryActionStatus.PENDING_APPROVAL.value:
+                # The approval branch: flagged, and explicitly not yet approved.
+                assert action.requires_approval is True
+                assert action.approved_by is None
+                continue
+
+            executed += 1
+            assert action.requires_approval is False, (
+                f"case {case_id} executed without an approval step but its "
+                f"action row claims approval was required"
+            )
+            assert action.approved_by is None
+            assert action.approved_at is None
+
+    assert executed > 0, (
+        "no case took the immediate-execution branch, so the property this "
+        "test exists for was never exercised"
+    )
