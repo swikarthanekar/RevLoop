@@ -34,6 +34,17 @@ class Settings(BaseSettings):
 
     app_env: AppEnvironment = "development"
     demo_mode: bool = True
+    #: Second, independent switch that permits `POST /api/v1/demo/reset` to
+    #: destroy and rebuild the demo tenant while `APP_ENV=production`.
+    #:
+    #: `DEMO_MODE` alone is not enough on purpose. Demo mode is on in the
+    #: deployed environment so the demo *routes* exist, and reset is the one
+    #: demo operation that deletes rows. Requiring a separate opt-in means the
+    #: destructive path cannot be reached by flipping a single flag that is
+    #: already on, and turning it off leaves the rest of the demo surface
+    #: working. Outside production the flag is not consulted, so local and test
+    #: environments keep resetting freely.
+    demo_reset_enabled: bool = False
     public_app_base_url: str = "http://localhost:3000"
     api_version: str = "0.1.0"
 

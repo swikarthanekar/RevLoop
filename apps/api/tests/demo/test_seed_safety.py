@@ -68,7 +68,7 @@ def test_schema_partial_missing_raises_before_persistence(monkeypatch) -> None:
     )
     monkeypatch.setattr("app.demo.seed.inspect", lambda _engine: FakeInspector())
 
-    with patch("app.demo.seed._persist_spec") as persist_mock:
+    with patch("app.demo.seed._persist_world") as persist_mock:
         with pytest.raises(SeedError, match="Missing tables: merchant_policies"):
             seed_demo_database(reset=True, settings=settings)
         persist_mock.assert_not_called()
