@@ -390,8 +390,10 @@ def test_reset_rolls_back_on_failure(
     def explode(*_args: object, **_kwargs: object):
         raise RuntimeError("injected seed failure")
 
-    # Fail after the delete step, while persisting the new spec.
-    monkeypatch.setattr("app.demo.seed._persist_spec", explode)
+    # Fail after the delete step, while persisting the new world. Seeding is
+    # now two passes (world, then real analysis and the history derived from
+    # it); failing in the first pass still has to roll the whole thing back.
+    monkeypatch.setattr("app.demo.seed._persist_world", explode)
 
     response = demo_client.post(RESET_PATH, headers=ADMIN_HEADERS)
     assert response.status_code >= 500
@@ -682,3 +684,86 @@ def test_batch_is_independent_of_demo_database_state(
     after = demo_client.post(BATCH_PATH, headers=ADMIN_HEADERS).json()
     assert before == after
     assert after["dataset"]["case_count"] == DEMO_BATCH_CASE_COUNT
+
+
+# --------------------------------------------------------------------------
+# E. Evaluation (the Proof page's data source)
+# --------------------------------------------------------------------------
+
+
+def test_evaluation_is_readable_by_any_authenticated_role(
+    demo_client: TestClient,
+) -> None:
+    """Reading a stored evaluation changes nothing, so it needs no ADMIN gate.
+
+    Gating it would also imply the figures are privileged, which they are not --
+    the whole point of the page is that a reviewer can check them.
+    """
+    for headers in (ADMIN_HEADERS, OPERATOR_HEADERS, ANALYST_HEADERS):
+        response = demo_client.get("/api/v1/demo/evaluation", headers=headers)
+        assert response.status_code == 200, headers
+        body = response.json()
+        assert body["evaluation"]["evaluation_label"] == "SYNTHETIC POLICY SIMULATION"
+        assert body["evaluation"]["data_source"] == "SYNTHETIC_SIMULATION"
+
+
+def test_evaluation_requires_authentication(demo_client: TestClient) -> None:
+    assert demo_client.get("/api/v1/demo/evaluation").status_code == 401
+
+
+def test_evaluation_reports_when_it_was_computed(demo_client: TestClient) -> None:
+    """A stored figure must say when it was produced.
+
+    Without this a reader cannot tell a live evaluation from a committed
+    fixture, which is exactly the doubt the page exists to answer.
+    """
+    body = demo_client.get("/api/v1/demo/evaluation", headers=ADMIN_HEADERS).json()
+    assert body["computed_at"]
+    assert body["duration_seconds"] > 0
+    assert body["recomputed"] is False
+
+
+def test_recompute_requires_admin(demo_client: TestClient) -> None:
+    """Not because it mutates business data -- it touches none -- but because it
+    is several seconds of CPU that should not be triggerable by any caller."""
+    for headers in (OPERATOR_HEADERS, ANALYST_HEADERS):
+        response = demo_client.post(
+            "/api/v1/demo/evaluation/recompute", headers=headers
+        )
+        assert response.status_code == 403, headers
+        assert response.json()["error"]["code"] == "ROLE_NOT_ALLOWED"
+
+
+def test_recompute_reproduces_identical_figures(demo_client: TestClient) -> None:
+    """Determinism, over HTTP.
+
+    This is the property the Recompute button demonstrates on stage: the
+    timestamp moves, every number stays the same.
+    """
+    first = demo_client.get("/api/v1/demo/evaluation", headers=ADMIN_HEADERS).json()
+    second = demo_client.post(
+        "/api/v1/demo/evaluation/recompute", headers=ADMIN_HEADERS
+    ).json()
+
+    assert second["recomputed"] is True
+    assert second["computed_at"] >= first["computed_at"]
+    assert (
+        second["evaluation"]["revloop_model_policy"]["realized_recovery_rate"]
+        == first["evaluation"]["revloop_model_policy"]["realized_recovery_rate"]
+    )
+    assert (
+        second["evaluation"]["incremental_realized_recovered_minor"]
+        == first["evaluation"]["incremental_realized_recovered_minor"]
+    )
+
+
+def test_evaluation_makes_no_provider_calls(
+    demo_client: TestClient,
+    provider_spy: ProviderSpy,
+) -> None:
+    """An offline evaluation must stay offline."""
+    assert (
+        demo_client.get("/api/v1/demo/evaluation", headers=ADMIN_HEADERS).status_code
+        == 200
+    )
+    assert provider_spy.calls == []
