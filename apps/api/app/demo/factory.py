@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
@@ -58,6 +59,8 @@ from app.domain.enums import (
     UserRole,
     VerificationSource,
 )
+from app.recovery.erv import calculate_erv
+from app.recovery.selection import select_candidate_row
 
 TERMINAL_STATUSES = {
     RecoveryCaseStatus.RECOVERED.value,
@@ -193,6 +196,10 @@ class RecommendationSpec:
     success_probability: Decimal
     expected_recovered_minor: int
     expected_value_minor: int
+    erv_action_cost_minor: int
+    erv_fatigue_penalty_minor: int
+    erv_operational_risk_penalty_minor: int
+    erv_delay_penalty_minor: int
     confidence: Decimal
     policy_eligible: bool
     requires_approval: bool
@@ -443,6 +450,46 @@ def _subscription_metadata_for_index(index: int, status: str) -> dict:
     return {"source": "SYNTHETIC_DEMO"}
 
 
+#: Deterministic time-to-recovery spread, in seconds.
+#:
+#: Every recovered case previously carried exactly 86400, so "Avg. time to
+#: recover" rendered as a suspiciously clean `1d` -- internally consistent and
+#: obviously synthetic to anyone who looked twice. These buckets are shaped like
+#: real recovery behaviour: a heavy cluster inside the first few hours (a
+#: customer who acts on a payment link does so quickly), a long tail out to
+#: three days, and nothing instantaneous.
+#:
+#: Still synthetic, and still labelled as such everywhere it surfaces. The point
+#: is not to imply measurement, it is to stop a fabricated constant from
+#: masquerading as one.
+_RECOVERY_LATENCY_BUCKETS_SECONDS: tuple[int, ...] = (
+    23 * 60,
+    47 * 60,
+    1 * 3600 + 38 * 60,
+    2 * 3600 + 54 * 60,
+    4 * 3600 + 11 * 60,
+    6 * 3600 + 32 * 60,
+    9 * 3600 + 17 * 60,
+    13 * 3600 + 45 * 60,
+    19 * 3600 + 8 * 60,
+    26 * 3600 + 22 * 60,
+    35 * 3600 + 50 * 60,
+    52 * 3600 + 6 * 60,
+    71 * 3600 + 29 * 60,
+)
+
+
+def _time_to_recovery_seconds(case_id: UUID) -> int:
+    """Pick this case's recovery latency from the deterministic spread.
+
+    Keyed on the case's own UUID, so the value is stable across seed runs and
+    independent of iteration order.
+    """
+    return _RECOVERY_LATENCY_BUCKETS_SECONDS[
+        case_id.int % len(_RECOVERY_LATENCY_BUCKETS_SECONDS)
+    ]
+
+
 def _build_case_status_sequence() -> list[str]:
     sequence: list[str] = []
     for status, count in CASE_STATE_COUNTS.items():
@@ -485,14 +532,24 @@ def _named_case_overrides() -> dict[str, dict[str, object]]:
     }
 
 
+def seed_analysis_timestamp(case: RecoveryCaseSpec) -> datetime:
+    """When a seeded case is treated as having been analysed.
+
+    Derived from the case's own `opened_at` rather than wall-clock now, so the
+    features that depend on elapsed time (`hours_since_failure` above all) are
+    identical on every seed run.
+    """
+    return case.opened_at.replace(minute=min(case.opened_at.minute + 5, 59))
+
+
 def _recommendations_for_case(
     case: RecoveryCaseSpec,
     analysis_run_id: UUID,
-    *,
-    logical_key: str | None,
-    created_at: datetime,
+    logical_key: str | None = None,
+    created_at: datetime | None = None,
 ) -> list[RecommendationSpec]:
     amount = case.amount_at_risk_minor
+    created_at = created_at or seed_analysis_timestamp(case)
     candidates: list[tuple[str, Decimal, int, bool, bool, list[str], list[dict[str, str]]]] = []
 
     if logical_key == DEMO_CASE_UPI_DOWNTIME:
@@ -686,7 +743,18 @@ def _recommendations_for_case(
 
     recommendations: list[RecommendationSpec] = []
     for action_type, prob, rank, eligible, requires_approval, reasons, factors in candidates:
-        expected_recovered = int(amount * prob)
+        # Run the real ERV calculation rather than setting expected value equal
+        # to expected recovery. The old shortcut made "Expected recovery value"
+        # and "Expected recovered amount" print the identical number, which is
+        # wrong by the engine's own definition: expected value is net of action
+        # cost and the risk and delay penalties.
+        breakdown = calculate_erv(
+            action=RecoveryActionType(action_type),
+            amount_at_risk_minor=amount,
+            success_probability=prob,
+            contacts_last_24h=0,
+        )
+        expected_recovered = breakdown.expected_recovered_minor
         recommendations.append(
             RecommendationSpec(
                 id=demo_uuid(f"recommendation:{case.id}:{analysis_run_id}:{action_type}"),
@@ -697,7 +765,11 @@ def _recommendations_for_case(
                 rank=rank,
                 success_probability=prob,
                 expected_recovered_minor=expected_recovered,
-                expected_value_minor=expected_recovered,
+                expected_value_minor=breakdown.expected_value_minor,
+                erv_action_cost_minor=breakdown.action_cost_minor,
+                erv_fatigue_penalty_minor=breakdown.fatigue_penalty_minor,
+                erv_operational_risk_penalty_minor=breakdown.operational_risk_penalty_minor,
+                erv_delay_penalty_minor=breakdown.delay_penalty_minor,
                 confidence=min(Decimal("0.95"), prob + Decimal("0.05")),
                 policy_eligible=eligible,
                 requires_approval=requires_approval,
@@ -711,7 +783,28 @@ def _recommendations_for_case(
     return recommendations
 
 
-def build_demo_seed_spec() -> DemoSeedSpec:
+#: Signature of a per-case recommendation builder.
+#:
+#: `build_demo_seed_spec` is pure and has no database, but real model inference
+#: needs one: features are read from the persisted case, customer, transaction
+#: and subscription rows. Injecting the builder lets `seed_demo_database` run
+#: the factory once to lay down the world, analyse the persisted cases with the
+#: production engine, then run the factory again with a builder that returns
+#: those real results -- so seeded actions, outcomes and audit entries are all
+#: derived from what the engine actually selected.
+#:
+#: The default builder produces the canned table below. It is retained as an
+#: explicit fallback for pure, database-free contexts (most factory unit tests),
+#: not as a path any deployed seed takes.
+CaseRecommendationBuilder = Callable[
+    [RecoveryCaseSpec, UUID, str | None, datetime], list[RecommendationSpec]
+]
+
+
+def build_demo_seed_spec(
+    *,
+    recommendations_for_case: CaseRecommendationBuilder | None = None,
+) -> DemoSeedSpec:
     org_created = demo_timestamp(days_offset=-120)
     organization = OrganizationSpec(
         id=DEMO_ORGANIZATION_ID,
@@ -992,15 +1085,23 @@ def build_demo_seed_spec() -> DemoSeedSpec:
         if case.current_analysis_run_id is None:
             continue
 
-        analysis_at = case.opened_at.replace(minute=min(case.opened_at.minute + 5, 59))
-        case_recs = _recommendations_for_case(
+        analysis_at = seed_analysis_timestamp(case)
+        build_recommendations = recommendations_for_case or _recommendations_for_case
+        case_recs = build_recommendations(
             case,
             case.current_analysis_run_id,
-            logical_key=case.logical_key,
-            created_at=analysis_at,
+            case.logical_key,
+            analysis_at,
         )
         recommendations.extend(case_recs)
         rank1 = next(rec for rec in case_recs if rec.rank == 1)
+        # Seeded history records what RevLoop DID, so it follows the selected
+        # action, not rank 1. Those diverge whenever the model's first choice is
+        # advisory. Building history from rank 1 is what made the dashboard
+        # attribute nearly all recovered revenue to RETRY_SAME_METHOD -- an
+        # action the product never executes -- which would not survive the first
+        # follow-up question from anyone with a payments background.
+        selected = select_candidate_row(case_recs) or rank1
 
         audit_logs.append(
             AuditLogSpec(
@@ -1010,10 +1111,14 @@ def build_demo_seed_spec() -> DemoSeedSpec:
                 actor_type=AuditActorType.MODEL.value,
                 actor_id="demo-heuristic-v1",
                 event_type="ANALYSIS_COMPLETED",
-                summary=f"Demo analysis selected {rank1.action_type} as rank 1 recommendation.",
+                summary=(
+                    f"Analysis selected {selected.action_type}; "
+                    f"model ranked {rank1.action_type} first."
+                ),
                 evidence={
                     "analysis_run_id": str(case.current_analysis_run_id),
-                    "selected_action": rank1.action_type,
+                    "selected_action": selected.action_type,
+                    "top_ranked_action": rank1.action_type,
                     "source": "SYNTHETIC_DEMO",
                 },
                 created_at=analysis_at,
@@ -1031,14 +1136,22 @@ def build_demo_seed_spec() -> DemoSeedSpec:
                     event_type="APPROVAL_REQUESTED",
                     summary="Recovery action requires operator approval before execution.",
                     evidence={
-                        "policy_reasons": rank1.policy_reasons,
+                        "policy_reasons": selected.policy_reasons,
                         "source": "SYNTHETIC_DEMO",
                     },
                     created_at=analysis_at.replace(minute=min(analysis_at.minute + 10, 59)),
                 )
             )
 
+        # AWAITING_APPROVAL is included deliberately. A case in that state is,
+        # by definition, waiting on a specific action -- but the seed used to
+        # create no action row for it, so `latest_action` was null, the UI's
+        # `canApprove` (which requires a non-null action) stayed false, and the
+        # approval flow had no reachable surface anywhere in the demo. The state
+        # was internally incoherent: the case claimed to be awaiting approval of
+        # nothing.
         if case.status in {
+            RecoveryCaseStatus.AWAITING_APPROVAL.value,
             RecoveryCaseStatus.SCHEDULED.value,
             RecoveryCaseStatus.WAITING_FOR_OUTCOME.value,
             RecoveryCaseStatus.RECOVERED.value,
@@ -1048,7 +1161,9 @@ def build_demo_seed_spec() -> DemoSeedSpec:
             attempt = 1
             action_status = RecoveryActionStatus.SCHEDULED.value
             executed_at = None
-            if case.status == RecoveryCaseStatus.WAITING_FOR_OUTCOME.value:
+            if case.status == RecoveryCaseStatus.AWAITING_APPROVAL.value:
+                action_status = RecoveryActionStatus.PENDING_APPROVAL.value
+            elif case.status == RecoveryCaseStatus.WAITING_FOR_OUTCOME.value:
                 action_status = RecoveryActionStatus.UNKNOWN.value
             elif case.status == RecoveryCaseStatus.RECOVERED.value:
                 action_status = RecoveryActionStatus.SUCCEEDED.value
@@ -1066,20 +1181,43 @@ def build_demo_seed_spec() -> DemoSeedSpec:
                     id=demo_uuid(f"action:{case.id}:{attempt}"),
                     organization_id=case.organization_id,
                     case_id=case.id,
-                    recommendation_id=rank1.id,
-                    action_type=rank1.action_type,
+                    recommendation_id=selected.id,
+                    action_type=selected.action_type,
                     status=action_status,
                     attempt_number=attempt,
-                    requires_approval=rank1.requires_approval,
-                    approved_by=DEMO_AUTH_USER_OPERATOR_ID if rank1.requires_approval else None,
-                    approved_at=action_created if rank1.requires_approval else None,
-                    idempotency_key=f"recovery:{case.id}:{attempt}:{rank1.action_type}",
+                    requires_approval=(
+                        True
+                        if case.status == RecoveryCaseStatus.AWAITING_APPROVAL.value
+                        else selected.requires_approval
+                    ),
+                    # An action still awaiting approval has not been approved,
+                    # so these stay null. Filling them in would have the row
+                    # claim an approval that never happened.
+                    approved_by=(
+                        None
+                        if case.status == RecoveryCaseStatus.AWAITING_APPROVAL.value
+                        else (DEMO_AUTH_USER_OPERATOR_ID if selected.requires_approval else None)
+                    ),
+                    approved_at=(
+                        None
+                        if case.status == RecoveryCaseStatus.AWAITING_APPROVAL.value
+                        else (action_created if selected.requires_approval else None)
+                    ),
+                    idempotency_key=f"recovery:{case.id}:{attempt}:{selected.action_type}",
                     request_fingerprint=f"demo-{case.id}-{attempt}",
                     scheduled_for=action_created,
                     execution_started_at=executed_at,
                     executed_at=executed_at,
-                    provider_reference=f"synthetic-action-{case.id}",
-                    provider_status=action_status.lower(),
+                    provider_reference=(
+                        None
+                        if case.status == RecoveryCaseStatus.AWAITING_APPROVAL.value
+                        else f"synthetic-action-{case.id}"
+                    ),
+                    provider_status=(
+                        None
+                        if case.status == RecoveryCaseStatus.AWAITING_APPROVAL.value
+                        else action_status.lower()
+                    ),
                     error_category=None,
                     error_message=None,
                     metadata={"source": "SYNTHETIC_DEMO"},
@@ -1115,7 +1253,9 @@ def build_demo_seed_spec() -> DemoSeedSpec:
                     verification_source=VerificationSource.SIMULATED_BATCH.value,
                     verified_event_id=None,
                     recovered_at=recovered_at,
-                    time_to_recovery_seconds=86400 if recovered_at else None,
+                    time_to_recovery_seconds=(
+                        _time_to_recovery_seconds(case.id) if recovered_at else None
+                    ),
                     metadata={"source": "SYNTHETIC_DEMO"},
                     created_at=case.resolved_at or case.last_transition_at,
                 )
