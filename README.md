@@ -2,6 +2,17 @@
 
 **AI revenue-recovery control plane for Razorpay merchants — Track 03: AI Revenue Recovery.**
 
+| | |
+| --- | --- |
+| **Live demo** | **https://revloop-bay.vercel.app** — sign in with **Continue as demo** |
+| **API** | https://revloop.up.railway.app ([health](https://revloop.up.railway.app/health) · [OpenAPI docs](https://revloop.up.railway.app/docs)) |
+| **Engineering decision log** | [AUDIT_RESPONSE.md](AUDIT_RESPONSE.md) — what an external audit found, and what we changed or deliberately kept |
+| **Judge Q&A** | [JUDGE_QA.md](JUDGE_QA.md) |
+
+The live demo runs on a **synthetic batch of 100 failed payments** against
+**Razorpay Test Mode**. Every screen is labelled as such. No real customer or
+real money is involved anywhere in this deployment.
+
 RevLoop detects revenue at risk (failed payments, failed/halted subscriptions),
 diagnoses why it happened using Razorpay's own failure evidence, predicts the
 recovery probability of each candidate intervention, ranks interventions by
