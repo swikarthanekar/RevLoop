@@ -11,7 +11,7 @@ const DEV_TOKEN_ROLE: Record<string, UserRole> = {
  * token (`NEXT_PUBLIC_DEV_AUTH_TOKEN`).
  *
  * This exists purely so the recovery-case UI does not offer a control the
- * backend will always reject for this role (FRONTEND_SPEC.md section 6.E).
+ * backend will always reject for this role (docs/FRONTEND_SPEC.md section 6.E).
  * It grants nothing: `apps/api/app/api/routes/recovery_actions.py`'s
  * `require_execute_role`/`require_approval_role` dependencies are the sole
  * source of authorization truth, and every mutation is re-checked

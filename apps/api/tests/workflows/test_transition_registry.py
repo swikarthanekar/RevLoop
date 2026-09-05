@@ -6,7 +6,7 @@ from app.domain.enums import RecoveryCaseStatus
 from app.workflows.events import RecoveryEvent
 from app.workflows.state_machine import TRANSITION_REGISTRY, lookup_transition
 
-# Authoritative transitions from STATE_MACHINE.md section 3 plus resolve_if_paid (section 9).
+# Authoritative transitions from docs/STATE_MACHINE.md section 3 plus resolve_if_paid (section 9).
 DOCUMENTED_TRANSITIONS: tuple[tuple[RecoveryCaseStatus, RecoveryEvent, RecoveryCaseStatus], ...] = (
     (RecoveryCaseStatus.DETECTED, RecoveryEvent.ANALYSIS_REQUESTED, RecoveryCaseStatus.ANALYZING),
     (

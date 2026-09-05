@@ -41,15 +41,15 @@ from app.ml.service import (
     load_trusted_model_bundle,
 )
 
-#: Explicit provenance for every synthetic evaluation result (API_CONTRACTS.md
+#: Explicit provenance for every synthetic evaluation result (docs/API_CONTRACTS.md
 #: section 12). Never reuse this label for provider-backed evidence.
 SYNTHETIC_SIMULATION = "SYNTHETIC_SIMULATION"
 
-#: Canonical label required by AI_ML_DESIGN.md section 5.5. Produced by the
+#: Canonical label required by docs/AI_ML_DESIGN.md section 5.5. Produced by the
 #: canonical evaluator itself; mirrored here only for assertion in tests.
 SYNTHETIC_POLICY_SIMULATION_LABEL = "SYNTHETIC POLICY SIMULATION"
 
-#: The canonical split used for a held-out policy benchmark (AI_ML_DESIGN.md
+#: The canonical split used for a held-out policy benchmark (docs/AI_ML_DESIGN.md
 #: section 6: "The test split is never used for model selection").
 EVALUATION_SPLIT = "test"
 

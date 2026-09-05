@@ -1,4 +1,4 @@
-"""Demo-only endpoints (API_CONTRACTS.md section 12).
+"""Demo-only endpoints (docs/API_CONTRACTS.md section 12).
 
 These routes exist only when ``DEMO_MODE=true``. Registration is conditional in
 ``app.api.router``, so with demo mode disabled the paths are not part of the

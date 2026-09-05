@@ -30,7 +30,7 @@ const ALL_STATUSES = [
 ];
 
 describe("isTerminalStatus", () => {
-  it("matches the three terminal states in STATE_MACHINE.md", () => {
+  it("matches the three terminal states in docs/STATE_MACHINE.md", () => {
     expect(isTerminalStatus("RECOVERED")).toBe(true);
     expect(isTerminalStatus("FAILED")).toBe(true);
     expect(isTerminalStatus("STOPPED")).toBe(true);

@@ -1,4 +1,4 @@
-"""Response contracts for the demo-only endpoints (API_CONTRACTS.md section 12).
+"""Response contracts for the demo-only endpoints (docs/API_CONTRACTS.md section 12).
 
 Field names deliberately mirror the canonical Prompt 11 synthetic-evaluation
 vocabulary (``expected_synthetic_recovered_minor``,

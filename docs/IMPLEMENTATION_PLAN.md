@@ -510,7 +510,7 @@ Baseline green.
 Same runtime contract tests for chosen artifact.
 
 ## Completion criteria
-Explicit `docs/MODEL_SELECTION.md` or metrics JSON records why LR/XGBoost was selected.
+Explicit `MODEL_SELECTION.md` or metrics JSON records why LR/XGBoost was selected.
 
 ## Do NOT work on yet
 Deep learning, neural networks, hyperparameter sweeps.

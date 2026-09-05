@@ -5,19 +5,19 @@ alwaysApply: true
 
 # RevLoop Project Rules
 
-Treat the repository documentation as binding engineering contracts. Before changing architecture, domain state, database schema, recovery calculations, API contracts, ML features, or Razorpay behavior, read the corresponding root documentation file.
+Treat the repository documentation as binding engineering contracts. Before changing architecture, domain state, database schema, recovery calculations, API contracts, ML features, or Razorpay behavior, read the corresponding specification under `docs/`.
 
 Priority documents:
-- `ARCHITECTURE.md`
-- `DOMAIN_MODEL.md`
-- `DATABASE_SCHEMA.md`
-- `STATE_MACHINE.md`
-- `RECOVERY_ENGINE.md`
-- `API_CONTRACTS.md`
-- `AI_ML_DESIGN.md`
-- `RAZORPAY_INTEGRATION.md`
-- `FRONTEND_SPEC.md`
-- `IMPLEMENTATION_PLAN.md`
+- `docs/ARCHITECTURE.md`
+- `docs/DOMAIN_MODEL.md`
+- `docs/DATABASE_SCHEMA.md`
+- `docs/STATE_MACHINE.md`
+- `docs/RECOVERY_ENGINE.md`
+- `docs/API_CONTRACTS.md`
+- `docs/AI_ML_DESIGN.md`
+- `docs/RAZORPAY_INTEGRATION.md`
+- `docs/FRONTEND_SPEC.md`
+- `docs/IMPLEMENTATION_PLAN.md`
 
 ## 1. Scope and architecture
 
@@ -58,7 +58,7 @@ Priority documents:
 
 ## 5. Recovery state machine
 
-- `STATE_MACHINE.md` is authoritative.
+- `docs/STATE_MACHINE.md` is authoritative.
 - Only workflow transition functions may mutate `RecoveryCase.status`.
 - All transitions must validate current state and required evidence.
 - Terminal states `RECOVERED`, `FAILED`, and `STOPPED` are immutable under normal automation.
@@ -110,7 +110,7 @@ Priority documents:
 
 ## 10. Database rules
 
-- Follow `DATABASE_SCHEMA.md` for table/constraint/index semantics.
+- Follow `docs/DATABASE_SCHEMA.md` for table/constraint/index semantics.
 - All tenant-owned rows have `organization_id` and all queries are tenant-scoped.
 - Use Alembic migrations; do not mutate schema manually in application startup.
 - Once a migration is shared/applied, add a new migration rather than rewriting history unless this is explicitly still an unshared local bootstrap.
@@ -164,12 +164,12 @@ Priority documents:
 ## 16. Documentation change policy
 
 When code intentionally changes an established contract, update the relevant document in the same change:
-- state -> `STATE_MACHINE.md`;
-- schema -> `DATABASE_SCHEMA.md` + `DOMAIN_MODEL.md`;
-- endpoint -> `API_CONTRACTS.md`;
-- model/features -> `AI_ML_DESIGN.md` + `RECOVERY_ENGINE.md`;
-- Razorpay behavior -> `RAZORPAY_INTEGRATION.md`;
-- UI behavior -> `FRONTEND_SPEC.md`.
+- state -> `docs/STATE_MACHINE.md`;
+- schema -> `docs/DATABASE_SCHEMA.md` + `docs/DOMAIN_MODEL.md`;
+- endpoint -> `docs/API_CONTRACTS.md`;
+- model/features -> `docs/AI_ML_DESIGN.md` + `docs/RECOVERY_ENGINE.md`;
+- Razorpay behavior -> `docs/RAZORPAY_INTEGRATION.md`;
+- UI behavior -> `docs/FRONTEND_SPEC.md`.
 
 Do not casually update documentation to justify accidental implementation drift. First verify whether the code or document is wrong.
 

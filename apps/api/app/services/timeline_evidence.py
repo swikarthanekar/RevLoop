@@ -165,7 +165,7 @@ def _list_of(item_validator: Validator) -> Validator:
 # The complete set of evidence keys the public timeline endpoint may emit.
 #
 # Every entry was derived from an actual backend producer (or, for
-# ``provider_event_id``, from the documented response in API_CONTRACTS.md
+# ``provider_event_id``, from the documented response in docs/API_CONTRACTS.md
 # section 10). Adding a key here is a security decision: it must have a
 # justified operator-facing use and a validator that bounds its value.
 # ---------------------------------------------------------------------------
@@ -189,7 +189,7 @@ _PUBLIC_EVIDENCE_FIELDS: dict[str, Validator] = {
     "source_event_key": _reference,
     "payment_id": _reference,
     "webhook_event_id": _uuid_string,
-    # --- documented in API_CONTRACTS.md section 10 ---
+    # --- documented in docs/API_CONTRACTS.md section 10 ---
     "provider_event_id": _reference,
     # --- case/analysis context (recovery_case_service, demo factory) ---
     "failure_category": _enum_value(FailureCategory),

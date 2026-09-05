@@ -18,7 +18,7 @@ interface AuditTimelineProps {
  * Read-only. A failure here is contained to this section so the surrounding
  * case detail and its action controls remain fully usable.
  *
- * Entries are rendered in the order the endpoint returns them: API_CONTRACTS.md
+ * Entries are rendered in the order the endpoint returns them: docs/API_CONTRACTS.md
  * section 10 specifies ascending order, and the backend query already sorts by
  * `created_at ASC, id ASC`, which is stable for equal timestamps. The frontend
  * does not re-sort and never infers order from event names.

@@ -95,7 +95,7 @@ const CATEGORIES: Record<TimelineCategory, CategoryPresentation> = {
 };
 
 /**
- * Event types documented in DOMAIN_MODEL.md section 12 and the STATE_MACHINE.md
+ * Event types documented in docs/DOMAIN_MODEL.md section 12 and the docs/STATE_MACHINE.md
  * transition table. `event_type` is NOT a closed enum on the wire — the webhook
  * ingest path records raw provider event names such as `payment.failed` — so
  * anything unmatched falls back to the actor-derived category below.
@@ -170,7 +170,7 @@ export function getEventCategory(
 
 /**
  * Warning styling is applied only to event types the domain model documents as
- * warnings — chiefly `STALE_WEBHOOK_IGNORED` (STATE_MACHINE.md section 10).
+ * warnings — chiefly `STALE_WEBHOOK_IGNORED` (docs/STATE_MACHINE.md section 10).
  *
  * There is no per-entry `stale` / `superseded` / `event_version` field in the
  * contract, so no other entry is ever marked stale. Staleness is never derived
@@ -210,7 +210,7 @@ interface EvidenceFieldSpec {
 /**
  * The complete set of evidence members this UI will ever display.
  *
- * Every entry is either documented in API_CONTRACTS.md section 10
+ * Every entry is either documented in docs/API_CONTRACTS.md section 10
  * (`provider_event_id`) or emitted by backend application code as structured,
  * non-sensitive operational data. Anything absent from this map is dropped
  * silently, including keys that do not exist yet.

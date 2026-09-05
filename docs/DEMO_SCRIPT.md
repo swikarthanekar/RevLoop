@@ -177,7 +177,7 @@ alone carry the model, the maths, the policy and the evaluation.
 
 ## Questions you will get, in one line each
 
-Full answers are in `JUDGE_QA.md`.
+Full answers are in `../JUDGE_QA.md`.
 
 - *"Is the AI real?"* — Logistic regression, `lr-v1.0.0`, action-conditional; the simulator scores live, and the model version is printed on every card.
 - *"Is this real money?"* — No. Razorpay Test Mode throughout, badge always on screen.

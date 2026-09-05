@@ -28,10 +28,10 @@ recovery" returned `422 ACTION_NOT_EXECUTABLE`.
 The audit framed the non-executable set as the defect. **We disagree.** The set
 is a documented product boundary, decided before any of this was built:
 
-- `RAZORPAY_INTEGRATION.md` §1, **"Simulated in P0"** — *"direct autonomous
+- `docs/RAZORPAY_INTEGRATION.md` §1, **"Simulated in P0"** — *"direct autonomous
   same-method debit for one-time failures"* and *"delivery of email/WhatsApp
   unless optional email adapter is added later"*.
-- `DOMAIN_MODEL.md:229` — *"`RETRY_SAME_METHOD` is a strategy type. P0 does not
+- `docs/DOMAIN_MODEL.md:229` — *"`RETRY_SAME_METHOD` is a strategy type. P0 does not
   invent unsupported direct payment debits."*
 
 RevLoop holds no mandate or saved token for these customers. Making the action
@@ -48,7 +48,7 @@ of executability.
 |---|---|---|
 | Executor's refusal to run `RETRY_SAME_METHOD` / `SEND_RECOVERY_MESSAGE` | **KEEP** | A documented P0 boundary. The executor must never trust its caller about its own capabilities. |
 | `select_recommendation` ignoring executability | **CHANGE** | `apps/api/app/recovery/ranking.py`. Selection is now narrower than ranking: the selected action must be eligible **and** executable. |
-| Candidate generation including advisory actions | **KEEP** | Dropping them would hide a real model output. `RECOVERY_ENGINE.md` §5.2 lists `RETRY_SAME_METHOD` in the candidate matrix for authentication and technical failures, and the model genuinely prefers it there. |
+| Candidate generation including advisory actions | **KEEP** | Dropping them would hide a real model output. `docs/RECOVERY_ENGINE.md` §5.2 lists `RETRY_SAME_METHOD` in the candidate matrix for authentication and technical failures, and the model genuinely prefers it there. |
 | `PROMPT16_EXECUTABLE`, and the message *"not executable in Prompt 16"* | **CHANGE** | Internal prompt numbering leaking through a public API. Replaced by `app/domain/capabilities.py`; the message now names the capability gap. |
 | The 422 guard itself | **KEEP** | Now unreachable through the UI, retained as defence in depth. |
 | Frontend rendering 422 as *"Validation failed — review the input"* | **CHANGE** | Meaningless on a screen with no input. `ACTION_NOT_EXECUTABLE` and six sibling codes now map to real explanations. |
@@ -66,7 +66,7 @@ show: *the model's best action is retry-same-method; RevLoop will not perform an
 autonomous debit, so it executes the best action it actually can.*
 
 > **Optional refinement we declined.** It was suggested that
-> `DOMAIN_MODEL.md:229`'s note — provider-managed retry "may mean this action is
+> `docs/DOMAIN_MODEL.md:229`'s note — provider-managed retry "may mean this action is
 > represented by waiting/re-evaluation" — gives an honest path where
 > `RETRY_SAME_METHOD` maps to a scheduled wait on `SUBSCRIPTION_FAILURE`.
 > We checked: `resolve_effective_scenario` (`candidates.py:112-121`) routes
@@ -456,7 +456,7 @@ this repository wrote down*, and `scripts/ml/common.py` is where those
 assumptions live. It is not evidence about real merchant traffic, and the
 `SYNTHETIC POLICY SIMULATION` label on the response says so.
 
-`API_CONTRACTS.md` §12 still shows `"0.2800"` in its example payload. That block
+`docs/API_CONTRACTS.md` §12 still shows `"0.2800"` in its example payload. That block
 uses round placeholder amounts (`100000000`, `45000000`) and documents the shape
 of the response rather than measured output, so it was left alone.
 

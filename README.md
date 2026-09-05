@@ -64,7 +64,7 @@ RECOVERED — measured, audited, dashboarded
 ```
 
 Every step is a state transition inside one authoritative `RecoveryCase`
-state machine (`STATE_MACHINE.md`) — no code outside the workflow layer may
+state machine (`docs/STATE_MACHINE.md`) — no code outside the workflow layer may
 assign case status directly.
 
 ## AI architecture
@@ -127,7 +127,7 @@ flowchart TD
     CUSTOMER --> RP
 ```
 
-Full component ownership and dependency rules: `ARCHITECTURE.md`.
+Full component ownership and dependency rules: `docs/ARCHITECTURE.md`.
 
 ## Technology stack
 
@@ -153,7 +153,7 @@ duplicate webhook handling driven by provider event timestamps and status
 precedence rather than delivery order. RevLoop deliberately does not
 compete with Razorpay's own subscription retry behavior — it decides
 *whether to wait for that retry* versus intervening. Details and the exact
-field mappings used: `RAZORPAY_INTEGRATION.md`.
+field mappings used: `docs/RAZORPAY_INTEGRATION.md`.
 
 ## Dataset & evaluation
 
@@ -203,12 +203,31 @@ apps/web/     Next.js dashboard (dashboard, opportunities, case detail, audit ti
 apps/api/     FastAPI modular monolith (recovery engine, workflows, policies, ML, AI, Razorpay adapter)
 data/         Synthetic/demo data
 scripts/      Seed and ML training scripts
-docs/         Supplementary docs (model selection)
+docs/         Engineering specifications (see below)
 infra/        Local/deployment placeholders
 ```
 
-See `ARCHITECTURE.md` for module ownership and `DATABASE_SCHEMA.md` /
-`DOMAIN_MODEL.md` for the data model.
+### Engineering documentation
+
+The specifications below are treated as binding contracts rather than notes:
+the modules that implement them cite them by name in source comments, and
+`.cursor/rules/architecture.mdc` requires reading the relevant one before
+changing that area.
+
+| Document | Covers |
+|---|---|
+| [ARCHITECTURE](docs/ARCHITECTURE.md) | Component ownership and dependency rules |
+| [DOMAIN_MODEL](docs/DOMAIN_MODEL.md) | Entities, vocabulary, invariants |
+| [DATABASE_SCHEMA](docs/DATABASE_SCHEMA.md) | Tables, keys, migrations |
+| [STATE_MACHINE](docs/STATE_MACHINE.md) | Legal `RecoveryCase` transitions |
+| [RECOVERY_ENGINE](docs/RECOVERY_ENGINE.md) | Candidate generation, ERV, ranking |
+| [AI_ML_DESIGN](docs/AI_ML_DESIGN.md) | Features, training, inference contract |
+| [MODEL_SELECTION](docs/MODEL_SELECTION.md) | Why Logistic Regression beat the XGBoost challenger |
+| [API_CONTRACTS](docs/API_CONTRACTS.md) | Endpoint request/response shapes |
+| [RAZORPAY_INTEGRATION](docs/RAZORPAY_INTEGRATION.md) | Field mappings, webhook handling |
+| [FRONTEND_SPEC](docs/FRONTEND_SPEC.md) | Screens, states, role behaviour |
+| [IMPLEMENTATION_PLAN](docs/IMPLEMENTATION_PLAN.md) | Milestone sequencing and acceptance criteria |
+| [DEMO_SCRIPT](docs/DEMO_SCRIPT.md) | Operator runbook for demonstrating the product |
 
 ## Local setup
 

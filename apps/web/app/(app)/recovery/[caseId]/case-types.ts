@@ -36,7 +36,7 @@ export type TimelineEntry = components["schemas"]["TimelineEntry"];
 export type TimelineResponse = components["schemas"]["TimelineResponse"];
 
 /**
- * Terminal states per STATE_MACHINE.md section 1. Used for presentation only —
+ * Terminal states per docs/STATE_MACHINE.md section 1. Used for presentation only —
  * the backend rejects mutations on terminal cases regardless of what the UI shows.
  */
 export const TERMINAL_STATUSES = ["RECOVERED", "FAILED", "STOPPED"] as const;

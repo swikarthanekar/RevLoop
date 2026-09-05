@@ -3,7 +3,7 @@
  *
  * Lives in a Next.js private folder (`__fixtures__`) so it is never routed, and
  * is imported exclusively from test files. Values mirror the documented
- * `API_CONTRACTS.md` case-detail example.
+ * `docs/API_CONTRACTS.md` case-detail example.
  */
 
 import type {

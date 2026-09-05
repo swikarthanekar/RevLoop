@@ -10,7 +10,7 @@ from app.integrations.razorpay.errors import RazorpayValidationError
 from app.integrations.razorpay.schemas import PaymentDowntime
 from app.recovery.schemas import DowntimeContext, DowntimeSeverity
 
-# Exact Razorpay downtime status tokens (see RAZORPAY_INTEGRATION.md §12).
+# Exact Razorpay downtime status tokens (see docs/RAZORPAY_INTEGRATION.md §12).
 ACTIVE_DOWNTIME_STATUSES = frozenset({"started", "updated"})
 RESOLVED_DOWNTIME_STATUSES = frozenset({"resolved"})
 SCHEDULED_DOWNTIME_STATUSES = frozenset({"scheduled"})

@@ -13,8 +13,8 @@ import {
  * Which controls this view offers for a given backend status and role.
  *
  * IMPORTANT: this is presentation only. It exists so the UI does not show a
- * control that STATE_MACHINE.md documents as impossible, or that the
- * backend's role check (FRONTEND_SPEC.md section 6.E) will always reject for
+ * control that docs/STATE_MACHINE.md documents as impossible, or that the
+ * backend's role check (docs/FRONTEND_SPEC.md section 6.E) will always reject for
  * the current user. It is NOT an authorization or eligibility decision:
  *
  *  - the backend re-validates every mutation, role included, and its
@@ -38,7 +38,7 @@ export interface CaseControls {
 /**
  * Manual analysis is offered only from `DETECTED`.
  *
- * STATE_MACHINE.md section 3 lists exactly one operator-triggered edge into
+ * docs/STATE_MACHINE.md section 3 lists exactly one operator-triggered edge into
  * `ANALYZING` (`DETECTED -> ANALYZING / ANALYSIS_REQUESTED`). The other inbound
  * edges are system-triggered (schedule timer, execution failure, outcome
  * timeout) or happen through approval rejection with `reanalyze`, so no manual
@@ -82,7 +82,7 @@ export function getCaseControls(
 
 /**
  * Short explanation of why no action control is offered, so a blocked state is
- * never silently empty. Wording follows STATE_MACHINE.md semantics.
+ * never silently empty. Wording follows docs/STATE_MACHINE.md semantics.
  */
 export function describeControlAvailability(status: string): string {
   switch (status) {
@@ -114,7 +114,7 @@ export function describeControlAvailability(status: string): string {
 /**
  * Backend error codes that mean "the case moved on" rather than "try again".
  *
- * API_CONTRACTS.md sections 7 and 8 document these as `409` conflicts. Any of
+ * docs/API_CONTRACTS.md sections 7 and 8 document these as `409` conflicts. Any of
  * them must trigger a refetch and an explicit review step — never an automatic
  * retry of the mutation.
  */

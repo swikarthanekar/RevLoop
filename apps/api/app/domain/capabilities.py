@@ -20,9 +20,9 @@ WHY THESE TWO ARE ADVISORY
 Both are deliberate P0 boundaries, documented before any of this was built, not
 gaps left by accident:
 
-- `RETRY_SAME_METHOD` -- RAZORPAY_INTEGRATION.md section 1 lists "direct
+- `RETRY_SAME_METHOD` -- docs/RAZORPAY_INTEGRATION.md section 1 lists "direct
   autonomous same-method debit for one-time failures" under **Simulated in P0**,
-  and DOMAIN_MODEL.md section 9 states "`RETRY_SAME_METHOD` is a strategy type.
+  and docs/DOMAIN_MODEL.md section 9 states "`RETRY_SAME_METHOD` is a strategy type.
   P0 does not invent unsupported direct payment debits." RevLoop holds no
   mandate or saved token for these customers, so re-attempting the original
   payment requires the customer to authorize it again. The merchant's own

@@ -22,7 +22,7 @@ Visible at `/proof`, recomputable in front of you.
 - **Same model.** Both are scored by the frozen `lr-v1.0.0` artifact, so the
   comparison isolates the policy rather than the predictor.
 - **Genuinely held out.** The test split is never used for model selection
-  (`AI_ML_DESIGN.md` §6).
+  (`docs/AI_ML_DESIGN.md` §6).
 - **Realised, not predicted.** The metric uses the outcomes the generator
   sampled, not the model's own probabilities. A confident-but-wrong model scores
   badly here.
@@ -90,8 +90,8 @@ synthetic data is worth more than a screen that looks more impressive.
 
 `RETRY_SAME_METHOD` and `SEND_RECOVERY_MESSAGE` are ranked but not executed.
 That is a documented P0 boundary, not an omission —
-`RAZORPAY_INTEGRATION.md` §1 lists "direct autonomous same-method debit" and
-"delivery of email/WhatsApp" under **Simulated in P0**, and `DOMAIN_MODEL.md:229`
+`docs/RAZORPAY_INTEGRATION.md` §1 lists "direct autonomous same-method debit" and
+"delivery of email/WhatsApp" under **Simulated in P0**, and `docs/DOMAIN_MODEL.md:229`
 states "P0 does not invent unsupported direct payment debits." The UI shows the
 model's preference for them and explains, in a sentence, why RevLoop is not the
 component that acts on it.
