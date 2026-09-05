@@ -57,6 +57,7 @@ from app.models.recovery_case import RecoveryCase
 from app.models.recovery_recommendation import RecoveryRecommendation
 from app.policies.engine import evaluate_policy
 from app.policies.schemas import MerchantPolicyConfig, PolicyEvaluationContext
+from app.recovery.selection import select_candidate_row
 from app.recovery.service import merchant_policy_from_model
 from app.workflows.events import RecoveryEvent
 from app.workflows.exceptions import CaseNotFoundError, StaleVersionError
@@ -844,6 +845,27 @@ class RecoveryActionService:
         if status != RecoveryCaseStatus.RECOMMENDED:
             raise CaseNotActionableError(f"Case status {status.value} cannot initiate actions.")
 
+    def _load_run_recommendations(
+        self,
+        case: RecoveryCase,
+        analysis_run_id: UUID,
+    ) -> list[RecoveryRecommendation]:
+        """Every candidate for one analysis run, so selection can be applied.
+
+        Selection needs the whole candidate set: it picks the highest-ranked
+        entry that is eligible, executable and non-STOP, which cannot be
+        expressed as a filter on a single row.
+        """
+        return list(
+            self._session.execute(
+                select(RecoveryRecommendation).where(
+                    RecoveryRecommendation.case_id == case.id,
+                    RecoveryRecommendation.organization_id == case.organization_id,
+                    RecoveryRecommendation.analysis_run_id == analysis_run_id,
+                )
+            ).scalars()
+        )
+
     def _load_current_recommendation(
         self,
         *,
@@ -853,20 +875,23 @@ class RecoveryActionService:
     ) -> RecoveryRecommendation:
         if case.current_analysis_run_id != analysis_run_id:
             raise StaleRecommendationError("Analysis run is no longer current for this case.")
-        recommendation = self._session.execute(
-            select(RecoveryRecommendation).where(
-                RecoveryRecommendation.case_id == case.id,
-                RecoveryRecommendation.organization_id == case.organization_id,
-                RecoveryRecommendation.analysis_run_id == analysis_run_id,
-                RecoveryRecommendation.action_type == action_type.value,
-                RecoveryRecommendation.rank == 1,
-            )
-        ).scalar_one_or_none()
-        if recommendation is None:
+
+        # "The selected recommendation" is whatever `select_candidate_row`
+        # chooses -- NOT rank 1. Those were the same thing until selection
+        # became capability-aware, and this method kept the old assumption: on
+        # a case whose rank 1 is advisory, selection correctly offered the
+        # rank-2 executable action, the UI rendered a button for it, and this
+        # lookup then refused it because it was not rank 1.
+        #
+        # The rule stays narrow. The executor accepts exactly the action
+        # selection would choose for this run, and rejects everything else, so
+        # this is not "execute whatever the caller asks for".
+        selected = select_candidate_row(self._load_run_recommendations(case, analysis_run_id))
+        if selected is None or selected.action_type != action_type.value:
             raise StaleRecommendationError("Selected recommendation not found for analysis run.")
-        if not recommendation.policy_eligible:
-            raise ActionBlockedByPolicyError(reasons=tuple(recommendation.policy_reasons or ()))
-        return recommendation
+        if not selected.policy_eligible:
+            raise ActionBlockedByPolicyError(reasons=tuple(selected.policy_reasons or ()))
+        return selected
 
     def _verify_recommendation_current(
         self,
@@ -886,7 +911,19 @@ class RecoveryActionService:
             raise StaleRecommendationError("Recommendation no longer belongs to case.")
         if case.current_analysis_run_id != recommendation.analysis_run_id:
             raise StaleRecommendationError("Recommendation analysis run is stale.")
-        if recommendation.rank != 1 or recommendation.action_type != action_type.value:
+
+        # Same correction as `_load_current_recommendation`: being rank 1 is not
+        # what makes a recommendation the selected one. An approval for an
+        # action whose rank 1 is advisory would otherwise be rejected here even
+        # though the action was exactly what the engine chose.
+        selected = select_candidate_row(
+            self._load_run_recommendations(case, recommendation.analysis_run_id)
+        )
+        if (
+            selected is None
+            or selected.id != recommendation.id
+            or recommendation.action_type != action_type.value
+        ):
             raise StaleRecommendationError("Recommendation is no longer selected.")
 
     def _evaluate_current_policy(

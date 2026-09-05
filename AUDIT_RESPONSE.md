@@ -538,3 +538,52 @@ hide exactly the discrepancy worth catching.
 **Live webhook replay.** Genuinely memorable, but it means a write path firing
 during judging. The read-only provider-events view is the version worth having,
 and it is not done. Recorded here rather than quietly dropped.
+
+---
+
+## 11. A production bug this work introduced, and why it escaped
+
+Capability-aware selection (§C1) shipped and immediately failed in production:
+Execute returned `422 ACTION_NOT_IN_ANALYSIS` on 17 of 21 `RECOMMENDED` cases.
+
+**The cause.** The selection rule was applied to the read path, the explanation
+path and the seeder -- and not to the executor.
+`apps/api/app/actions/service.py` still used `rank == 1` as its definition of
+"the selected recommendation", in two places: `_load_current_recommendation`
+filtered on it, and `_verify_recommendation_current` asserted it. So selection
+correctly offered the rank-2 executable action, the UI rendered a button for it,
+and the executor refused it for not being rank 1.
+
+**Why the tests did not catch it.**
+`test_seeded_dataset_is_demonstrable.py` asserted that
+`select_candidate_row(...)` returns an executable action for every case that
+renders an Execute control. That checks the helper against itself. Every code
+path that did *not* use the helper was invisible to it, which is precisely the
+set of paths where the bug lived.
+
+The test now submits the action through `create_case_action` with a stubbed
+provider transport, for every `RECOMMENDED` case, and fails on any non-2xx.
+Verified to catch the regression: with the `rank == 1` behaviour restored it
+fails with *"Execute failed on cases whose UI offers the button"*.
+
+**A fifth site, found only by grepping the literal.**
+`app/repositories/recovery_case_repo.py` joined on `rank == 1` to populate the
+list view's `recommended_action`. **A dataset reset would not have fixed this**
+-- roughly 18 cases still have an advisory rank 1 after reseeding, so the list
+would have kept advertising an action the detail page contradicted and the
+executor refused. Now routed through the same helper, applied in Python rather
+than SQL because "highest-ranked candidate that is eligible, executable,
+non-STOP and positive value" is not a predicate on one row, and expressing it in
+SQL would have been a sixth implementation.
+
+**The lesson worth keeping.** Introducing a shared helper does not consolidate a
+rule; deleting the old literals does. `select_candidate_row` was described as
+"the single source of truth" while five `rank == 1` literals were still in the
+tree. The check that finds this is grepping the *literal*, not reasoning about
+the concept -- and it belongs in the same change as the refactor, not a later
+one.
+
+The remaining `rank == 1` occurrences are correct by intent and were left alone:
+`top_ranked_action` on case detail (which genuinely means rank 1), the audit
+summary line recording what the model ranked first, and the naive-baseline
+counterfactual in analytics.

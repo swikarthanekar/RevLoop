@@ -191,11 +191,22 @@ test.describe("mobile layout", () => {
     // still there, they just scroll locally.
     await page.goto("/recovery");
     await page.waitForSelector("table tbody tr");
-    const scroller = page.locator("div.overflow-x-auto").first();
+
+    // Resolved from the table upwards rather than by picking the first
+    // `.overflow-x-auto` on the page: the loading skeleton uses the same class,
+    // so `.first()` could match a zero-sized element that had not yet been
+    // replaced, which is exactly how this assertion flaked.
+    const scroller = page
+      .locator("div.overflow-x-auto")
+      .filter({ has: page.locator("table tbody tr") })
+      .first();
+    await expect(scroller).toBeVisible();
+
     const metrics = await scroller.evaluate((el) => ({
       client: el.clientWidth,
       scroll: el.scrollWidth,
     }));
+    expect(metrics.client).toBeGreaterThan(0);
     expect(metrics.scroll).toBeGreaterThan(metrics.client);
   });
 });
