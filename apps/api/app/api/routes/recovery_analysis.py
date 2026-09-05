@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Annotated
 from uuid import UUID
 
@@ -13,6 +14,7 @@ from app.core.auth import AuthContext, get_current_user
 from app.core.config import Settings, get_settings
 from app.core.deps import get_db
 from app.core.errors import AppError, ForbiddenError, NotFoundError
+from app.domain.capabilities import advisory_reason_text
 from app.domain.enums import AuditActorType, UserRole
 from app.recovery.service import (
     InsufficientCaseDataError,
@@ -34,6 +36,8 @@ from app.workflows.exceptions import (
     WorkflowError,
 )
 from app.workflows.recovery import RecoveryAnalysisWorkflowService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/recovery-cases", tags=["recovery-analysis"])
 
@@ -77,6 +81,9 @@ def _candidate_responses(candidates) -> list[CandidateRecommendationResponse]:
             confidence=float(candidate.confidence),
             requires_approval=candidate.requires_approval,
             policy_eligible=candidate.eligible,
+            execution_mode=candidate.execution_mode,
+            advisory_reason_code=candidate.advisory_reason_code,
+            advisory_reason=advisory_reason_text(candidate.action_type),
         )
         for candidate in candidates
     ]
@@ -143,26 +150,55 @@ def analyze_recovery_case(
     explanation_source = None
     if result.computation.selected is not None:
         explanation_service = _build_explanation_service(settings)
-        explanation_result = explanation_service.enrich(
-            db,
-            case_id=case_id,
-            organization_id=current_user.organization_id,
-            analysis_run_id=result.analysis_run_id,
-        )
-        explanation_payload = RecommendationExplanationResponse(
-            summary=explanation_result.explanation.summary,
-            evidence=list(explanation_result.explanation.evidence),
-            safety=list(explanation_result.explanation.safety),
-            customer_impact=explanation_result.explanation.customer_impact,
-        )
-        explanation_source = explanation_result.explanation_source
+        try:
+            explanation_result = explanation_service.enrich(
+                db,
+                case_id=case_id,
+                organization_id=current_user.organization_id,
+                analysis_run_id=result.analysis_run_id,
+            )
+        except Exception:  # noqa: BLE001 - see below
+            # `analyze_recovery_case` above has already COMMITTED the analysis:
+            # the case has transitioned, the recommendations are durable, and
+            # the audit trail is written. Enrichment is presentation only and
+            # runs afterwards, so letting it raise here turned a fully
+            # successful, committed analysis into `500 INTERNAL_ERROR` -- the
+            # caller saw a failure for work that had actually succeeded, and
+            # would reasonably retry a non-idempotent operation.
+            #
+            # `enrich` already degrades LLM failures to a template internally;
+            # what escapes it is narrower and less predictable (a `ValueError`
+            # from the analysis-run currency check, `NoResultFound` from a
+            # concurrent re-analysis, a validation error). Catching broadly is
+            # deliberate: nothing this component can raise is worth discarding
+            # a committed analysis over. The response simply carries no
+            # explanation, which every client already handles -- both fields
+            # are optional and are absent whenever no action was selected.
+            logger.warning(
+                "Explanation enrichment failed after a committed analysis "
+                "(case=%s run=%s); returning the analysis without an "
+                "explanation.",
+                case_id,
+                result.analysis_run_id,
+                exc_info=True,
+            )
+        else:
+            explanation_payload = RecommendationExplanationResponse(
+                summary=explanation_result.explanation.summary,
+                evidence=list(explanation_result.explanation.evidence),
+                safety=list(explanation_result.explanation.safety),
+                customer_impact=explanation_result.explanation.customer_impact,
+            )
+            explanation_source = explanation_result.explanation_source
 
+    ranked = result.computation.ranked_candidates
     return AnalyzeRecoveryCaseResponse(
         case_id=result.case_id,
         analysis_run_id=result.analysis_run_id,
         status=result.status,
         selected=_selected_response(result.computation.selected),
-        candidates=_candidate_responses(result.computation.ranked_candidates),
+        top_ranked_action=ranked[0].action_type.value if ranked else None,
+        candidates=_candidate_responses(ranked),
         explanation=explanation_payload,
         explanation_source=explanation_source,
     )

@@ -9,6 +9,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.domain.capabilities import ActionExecutionMode
 from app.domain.enums import CaseType, FailureCategory, RecoveryActionType
 
 FEATURE_SCHEMA_VERSION = "recovery_features_v1"
@@ -259,6 +260,20 @@ class RecommendationCandidate(BaseModel):
     requires_approval: bool
     policy_reasons: tuple[str, ...] = ()
     operational_burden: int = Field(ge=0)
+    #: Whether RevLoop performs this action itself, or only recommends it.
+    #: Server-owned and derived from `app.domain.capabilities`; a candidate is
+    #: ranked on expected value regardless, but only an EXECUTABLE one can be
+    #: selected. Carried on the candidate so clients never maintain a second
+    #: copy of the capability envelope.
+    execution_mode: ActionExecutionMode = ActionExecutionMode.EXECUTABLE
+    #: Machine-readable capability gap, populated only for ADVISORY actions.
+    advisory_reason_code: str | None = None
+    #: The components behind `expected_value_minor`, so the arithmetic can be
+    #: shown rather than asserted. Never recomputed by a client.
+    action_cost_minor: int = Field(default=0, ge=0)
+    fatigue_penalty_minor: int = Field(default=0, ge=0)
+    operational_risk_penalty_minor: int = Field(default=0, ge=0)
+    delay_penalty_minor: int = Field(default=0, ge=0)
 
 
 class RankedRecommendationCandidate(RecommendationCandidate):

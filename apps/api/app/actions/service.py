@@ -27,6 +27,7 @@ from app.actions.keys import (
 )
 from app.actions.repository import RecoveryActionRepository
 from app.core.config import Settings
+from app.domain.capabilities import advisory_reason_text, is_executable
 from app.domain.enums import (
     PAYMENT_LINK_MECHANISM_ACTIONS,
     AuditActorType,
@@ -70,9 +71,6 @@ TERMINAL_STATUSES = frozenset(
         RecoveryCaseStatus.STOPPED,
     }
 )
-PROMPT16_EXECUTABLE = frozenset(
-    {RecoveryActionType.WAIT, RecoveryActionType.STOP, RecoveryActionType.ESCALATE_TO_HUMAN}
-) | PAYMENT_LINK_MECHANISM_ACTIONS
 IN_FLIGHT_STATUSES = frozenset(
     {
         RecoveryActionStatus.PENDING_APPROVAL.value,
@@ -148,9 +146,15 @@ class RecoveryActionService:
         actor_type: AuditActorType,
         actor_id: str | None,
     ) -> ActionResponsePayload:
-        if action_type not in PROMPT16_EXECUTABLE:
+        # Defence in depth. Candidate selection no longer picks an advisory
+        # action (see `app.domain.capabilities`), so a well-behaved client
+        # cannot reach this. It stays because the executor must never be the
+        # component that trusts its caller about its own capabilities.
+        if not is_executable(action_type):
+            reason = advisory_reason_text(action_type)
             raise UnsupportedActionError(
-                f"Action type {action_type.value} is not executable in Prompt 16."
+                f"RevLoop does not execute {action_type.value} actions."
+                + (f" {reason}" if reason else "")
             )
         case = self._repo.lock_case(case_id=case_id, organization_id=organization_id)
         if case is None:

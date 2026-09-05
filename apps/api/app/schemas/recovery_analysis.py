@@ -6,6 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.domain.capabilities import ActionExecutionMode
 from app.domain.enums import AnalysisReason, RecoveryCaseStatus
 
 
@@ -31,6 +32,13 @@ class CandidateRecommendationResponse(SelectedRecommendationResponse):
 
     rank: int = Field(ge=1)
     policy_eligible: bool
+    #: EXECUTABLE or ADVISORY, from `app.domain.capabilities`. `policy_eligible`
+    #: answers "does merchant policy permit this?"; this answers the separate
+    #: question "can RevLoop carry it out at all?". Both are needed: an action
+    #: can be policy-eligible and still not something RevLoop performs.
+    execution_mode: ActionExecutionMode
+    advisory_reason_code: str | None = None
+    advisory_reason: str | None = None
 
 
 class RecommendationExplanationResponse(BaseModel):
@@ -48,7 +56,13 @@ class AnalyzeRecoveryCaseResponse(BaseModel):
     case_id: UUID
     analysis_run_id: UUID
     status: RecoveryCaseStatus
+    #: The chosen action, always one RevLoop can execute. None when no eligible
+    #: executable candidate exists.
     selected: SelectedRecommendationResponse | None
+    #: The model's top-ranked action, which may be ADVISORY and so may differ
+    #: from `selected`. Stated explicitly so a client never has to reimplement
+    #: the selection rule to explain the difference to an operator.
+    top_ranked_action: str | None = None
     candidates: list[CandidateRecommendationResponse]
     explanation: RecommendationExplanationResponse | None = None
     explanation_source: str | None = None

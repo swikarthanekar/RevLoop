@@ -8,9 +8,15 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.core.errors import ForbiddenError, NotFoundError
+from app.domain.capabilities import (
+    advisory_reason_code,
+    advisory_reason_text,
+    execution_mode,
+)
 from app.domain.enums import PAYMENT_LINK_MECHANISM_ACTIONS, CaseType, RecoveryActionType
 from app.models.recovery_action import RecoveryAction
 from app.models.recovery_recommendation import RecoveryRecommendation
+from app.recovery.selection import select_candidate_row
 from app.repositories.recovery_case_repo import (
     RecoveryCaseListFilters,
     RecoveryCaseListRow,
@@ -24,6 +30,7 @@ from app.schemas.recovery_case import (
     CaseOutcome,
     CustomerDetail,
     CustomerSummary,
+    ERVBreakdownResponse,
     FailureEvidence,
     LatestAction,
     RecommendationCandidate,
@@ -61,6 +68,45 @@ def _build_structured_explanation(
     return StructuredExplanation(summary=summary, evidence=evidence, safety=safety)
 
 
+
+def _map_erv_breakdown(rec: RecoveryRecommendation) -> ERVBreakdownResponse | None:
+    """The stored component arithmetic, or None when it cannot be trusted.
+
+    Two ways this returns None, both deliberate:
+
+    * the row predates the components being persisted, so there is nothing to
+      show and nothing that could be reconstructed exactly (the fatigue penalty
+      depends on a `contacts_last_24h` value that is not stored);
+    * the stored components do not sum to the stored `expected_value_minor`.
+
+    The second is a hard integrity check, not defensive noise. A waterfall whose
+    parts disagree with its total is worse than no waterfall: it invites a
+    reader to trust an arithmetic that is wrong. Withholding it is the honest
+    failure mode.
+    """
+    parts = (
+        rec.erv_action_cost_minor,
+        rec.erv_fatigue_penalty_minor,
+        rec.erv_operational_risk_penalty_minor,
+        rec.erv_delay_penalty_minor,
+    )
+    if any(part is None for part in parts):
+        return None
+    action_cost, fatigue, operational_risk, delay = (int(part) for part in parts)
+    expected_recovered = int(rec.expected_recovered_minor)
+    expected_value = int(rec.expected_value_minor)
+    if expected_recovered - action_cost - fatigue - operational_risk - delay != expected_value:
+        return None
+    return ERVBreakdownResponse(
+        expected_recovered_minor=expected_recovered,
+        action_cost_minor=action_cost,
+        fatigue_penalty_minor=fatigue,
+        operational_risk_penalty_minor=operational_risk,
+        delay_penalty_minor=delay,
+        expected_value_minor=expected_value,
+    )
+
+
 def _map_recommendation(rec: RecoveryRecommendation) -> RecommendationCandidate:
     factors = [
         RecommendationFactor(
@@ -72,6 +118,10 @@ def _map_recommendation(rec: RecoveryRecommendation) -> RecommendationCandidate:
         if item.get("code")
     ]
     policy_reasons = [str(reason) for reason in (rec.policy_reasons or [])]
+    # Capability is derived from the action type at read time, not read back
+    # from the row. A recommendation persisted before the capability registry
+    # existed therefore still reports this deployment's real capabilities.
+    action = RecoveryActionType(rec.action_type)
     return RecommendationCandidate(
         action_type=rec.action_type,
         rank=rec.rank,
@@ -82,6 +132,10 @@ def _map_recommendation(rec: RecoveryRecommendation) -> RecommendationCandidate:
         requires_approval=rec.requires_approval,
         policy_reasons=policy_reasons,
         factors=factors,
+        execution_mode=execution_mode(action),
+        advisory_reason_code=advisory_reason_code(action),
+        advisory_reason=advisory_reason_text(action),
+        erv_breakdown=_map_erv_breakdown(rec),
     )
 
 
@@ -262,14 +316,25 @@ class RecoveryCaseService:
             return None
 
         rank1 = next((rec for rec in recommendations if rec.rank == 1), recommendations[0])
+        # `selected_action` is what the Execute control targets, so it must be
+        # the action RevLoop can actually perform -- not simply rank 1. Those
+        # were the same thing until candidate selection became capability-aware;
+        # keeping `selected_action = rank1` here would have meant the UI still
+        # offered a button for an advisory action and the executor still
+        # rejected it. Reusing `select_candidate_row` (rather than repeating
+        # its rule) keeps one definition of "selected" across write and read.
+        selected_row = select_candidate_row(recommendations) or rank1
         return CaseAnalysis(
             analysis_run_id=case.current_analysis_run_id,
             model_version=rank1.model_version,
             feature_schema_version=rank1.feature_schema_version,
-            selected_action=rank1.action_type,
-            confidence=float(rank1.confidence),
+            selected_action=selected_row.action_type,
+            # The confidence shown beside the decision belongs to the action
+            # being decided on, so it tracks `selected_row`, not rank 1.
+            confidence=float(selected_row.confidence),
+            top_ranked_action=rank1.action_type,
             candidates=[_map_recommendation(rec) for rec in recommendations],
-            structured_explanation=_build_structured_explanation(rank1),
+            structured_explanation=_build_structured_explanation(selected_row),
         )
 
     def _build_latest_action(self, case_id: UUID, organization_id: UUID) -> LatestAction | None:

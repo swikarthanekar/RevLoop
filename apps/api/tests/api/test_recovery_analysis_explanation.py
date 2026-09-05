@@ -376,3 +376,79 @@ def test_analyze_api_no_open_transaction_during_provider(
     assert response.status_code == 200, response.text
     assert observed.get("in_transaction") is False
     assert response.json()["explanation_source"] == "LLM"
+
+
+def test_explanation_describes_the_executed_action_not_rank_one(
+    postgres_session,
+) -> None:
+    """The explanation must argue for the action that will actually run.
+
+    `_build_input` used to read the `rank == 1` recommendation. Once candidate
+    selection became capability-aware those diverge: the model's top choice can
+    be an advisory action RevLoop does not perform. Reading rank 1 would have
+    produced a response whose `explanation` argued for one action while its
+    `selected` field named a different one -- an inconsistency a reader would
+    notice immediately, and exactly the divergence already fixed on the
+    case-detail read path.
+    """
+    from sqlalchemy import select as sa_select
+
+    from app.ai.explanations import RecommendationExplanationService
+    from app.core.config import Settings
+    from app.demo.constants import DEMO_ORGANIZATION_ID
+    from app.demo.seed import seed_demo_database
+    from app.models.recovery_case import RecoveryCase
+    from app.models.recovery_recommendation import RecoveryRecommendation
+    from app.recovery.selection import select_candidate_row, top_ranked_row
+    from tests.demo.conftest import postgres_url
+
+    url = postgres_url()
+    assert url is not None
+    settings = Settings(
+        app_env="test", demo_mode=True, database_url=url, _env_file=None
+    )
+    seed_demo_database(reset=True, settings=settings)
+
+    service = RecommendationExplanationService(settings=settings)
+    postgres_session.expire_all()
+    cases = list(
+        postgres_session.execute(
+            sa_select(RecoveryCase).where(
+                RecoveryCase.organization_id == DEMO_ORGANIZATION_ID,
+                RecoveryCase.current_analysis_run_id.is_not(None),
+            )
+        ).scalars()
+    )
+    assert cases
+
+    divergent = 0
+    for case in cases:
+        rows = list(
+            postgres_session.execute(
+                sa_select(RecoveryRecommendation).where(
+                    RecoveryRecommendation.case_id == case.id,
+                    RecoveryRecommendation.organization_id == DEMO_ORGANIZATION_ID,
+                    RecoveryRecommendation.analysis_run_id
+                    == case.current_analysis_run_id,
+                )
+            ).scalars()
+        )
+        selected = select_candidate_row(rows)
+        top = top_ranked_row(rows)
+        assert selected is not None and top is not None
+
+        built = service._build_input(
+            postgres_session,
+            case_id=case.id,
+            organization_id=DEMO_ORGANIZATION_ID,
+            analysis_run_id=case.current_analysis_run_id,
+        )
+        assert built.selected_action == selected.action_type
+        if selected.action_type != top.action_type:
+            divergent += 1
+            # The point of the test: on these cases, rank 1 would have been wrong.
+            assert built.selected_action != top.action_type
+
+    assert divergent > 0, (
+        "no seeded case has an advisory rank 1, so this test proved nothing"
+    )
