@@ -118,7 +118,7 @@ flowchart TD
     WF --> REC --> ML
     REC --> DOWN
     REC --> POLICY --> WF
-    WF --> LLM
+    API --> LLM
     WF --> EXEC --> RP
     WF --> DB
     API --> AUDIT
@@ -160,8 +160,12 @@ field mappings used: `RAZORPAY_INTEGRATION.md`.
 Two distinct, clearly labeled datasets:
 
 - **Demo/dashboard seed** (`scripts/seed_demo.py`) — one deterministic demo
-  organization, 79 customers, 655 transactions, 115 recovery cases across
-  active/recovered/failed/stopped states, tagged `is_synthetic`.
+  organization, 64 customers, 640 transactions, 32 subscriptions and 100
+  recovery cases spread across every lifecycle state (8 `DETECTED`,
+  15 `RECOMMENDED`, 5 `AWAITING_APPROVAL`, 5 `SCHEDULED`,
+  7 `WAITING_FOR_OUTCOME`, 38 `RECOVERED`, 12 `FAILED`, 10 `STOPPED`),
+  tagged `is_synthetic`. The counts are fixed in
+  `apps/api/app/demo/constants.py`, so a reseed reproduces them exactly.
 - **ML training data** (`scripts/ml/generate_training_data.py`) — a larger
   synthetic case-action dataset with genuine conditional latent-probability
   structure (not noise), group-split by case id so no case crosses
@@ -341,8 +345,8 @@ do not exist when demo mode is off, in either auth mode.
   everywhere it's surfaced; only the single live Payment-Link-to-webhook
   flow runs against real Razorpay Test Mode.
 - Overdue-invoice recovery, Hinglish/multilingual outreach, forecasting,
-  and anomaly detection are intentionally out of scope for this phase (see
-  `MASTER_PRD.md` for the full future roadmap).
+  and anomaly detection are intentionally out of scope for this phase — see
+  [Future roadmap](#future-roadmap).
 
 ## Future roadmap
 

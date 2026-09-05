@@ -18,14 +18,18 @@ out/
 
 # Environment and secrets
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
 # IDE and OS
 .idea/
 .vscode/
 *.swp
 .DS_Store
+Thumbs.db
+
+# Local deployment-CLI state
+.vercel/
 
 # Test and coverage
 coverage/
@@ -42,9 +46,16 @@ build/
 *.log
 npm-debug.log*
 
-# Model artifacts (local only)
+# Model artifacts are local-only, except the one bundle the deployed image
+# loads at runtime (Dockerfile sets MODEL_BUNDLE_PATH to it).
 *.joblib
 *.pkl
+!apps/api/app/ml/artifacts/recovery_model.joblib
 
-# Rendered copy of PITCH_SCRIPT.md, regenerated on demand.
+# Presentation and build-process artifacts. Kept locally, deliberately not
+# published: CURSOR_PROMPTS.md is the agent prompt sequence used to build the
+# project, and the pitch script is word-for-word recording narration. Neither
+# helps anyone understand, run or evaluate RevLoop.
+CURSOR_PROMPTS.md
+PITCH_SCRIPT.md
 RevLoop-Demo-Script.pdf
