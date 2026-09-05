@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import Select, and_, desc, func, or_, select
+from sqlalchemy import Select, and_, desc, func, or_, select, tuple_
 from sqlalchemy.orm import Session, aliased
 
 from app.models.customer import Customer
@@ -16,6 +16,7 @@ from app.models.recovery_outcome import RecoveryOutcome
 from app.models.recovery_recommendation import RecoveryRecommendation
 from app.models.subscription import Subscription
 from app.models.transaction import Transaction
+from app.recovery.selection import select_candidate_row
 from app.schemas.common import RecoveryCaseSort
 
 
@@ -167,16 +168,73 @@ class RecoveryCaseRepository:
         stmt = stmt.limit(limit).offset(offset)
 
         rows = self._session.execute(stmt).all()
-        items = [
-            RecoveryCaseListRow(
-                case=row[0],
-                customer=row[1],
-                recommended_action=row[2],
-                confidence=row[3],
+        # The join above resolves rank 1, which is not necessarily the action
+        # the engine selected: when rank 1 is advisory, selection picks a
+        # lower-ranked executable action. Left uncorrected, the list would
+        # advertise an action that the case detail then contradicts and that
+        # the executor refuses.
+        #
+        # Applied in Python rather than in the join because selection is
+        # "highest-ranked candidate that is eligible, executable, non-STOP and
+        # positive value", which is not a predicate on a single row. Expressing
+        # it in SQL would be a second implementation of a rule that has already
+        # drifted once.
+        selected_by_case = self._selected_actions_for(
+            [row[0] for row in rows]
+        )
+        items = []
+        for row in rows:
+            case = row[0]
+            selected = selected_by_case.get((case.id, case.current_analysis_run_id))
+            items.append(
+                RecoveryCaseListRow(
+                    case=case,
+                    customer=row[1],
+                    recommended_action=(
+                        selected.action_type if selected is not None else row[2]
+                    ),
+                    confidence=selected.confidence if selected is not None else row[3],
+                )
             )
-            for row in rows
-        ]
         return items, int(total)
+
+    def _selected_actions_for(
+        self,
+        cases: list[RecoveryCase],
+    ) -> dict[tuple[UUID, UUID], RecoveryRecommendation]:
+        """The selected recommendation for each listed case, in one query.
+
+        Keyed on (case id, analysis run id) so a recommendation from a
+        superseded run can never be attributed to the current one.
+        """
+        keys = [
+            (case.id, case.current_analysis_run_id)
+            for case in cases
+            if case.current_analysis_run_id is not None
+        ]
+        if not keys:
+            return {}
+
+        candidates = self._session.execute(
+            select(RecoveryRecommendation).where(
+                tuple_(
+                    RecoveryRecommendation.case_id,
+                    RecoveryRecommendation.analysis_run_id,
+                ).in_(keys)
+            )
+        ).scalars()
+
+        grouped: dict[tuple[UUID, UUID], list[RecoveryRecommendation]] = {}
+        for candidate in candidates:
+            grouped.setdefault(
+                (candidate.case_id, candidate.analysis_run_id), []
+            ).append(candidate)
+
+        return {
+            key: selected
+            for key, rows in grouped.items()
+            if (selected := select_candidate_row(rows)) is not None
+        }
 
     def _apply_filters(
         self,

@@ -18,6 +18,9 @@ that broke.
 
 from __future__ import annotations
 
+import json
+import uuid
+
 import pytest
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
@@ -69,6 +72,28 @@ def seeded(migrated_postgres: Engine | None) -> Engine:
 def session(seeded: Engine):
     with sessionmaker(bind=seeded, future=True)() as db:
         yield db
+
+
+
+@pytest.fixture()
+def freshly_seeded(seeded: Engine) -> Engine:
+    """Reseed before and after a test that actually executes actions.
+
+    `create_case_action` commits its state-machine transition, so a test that
+    submits an action genuinely moves cases out of RECOMMENDED. A rollback in
+    the test cannot undo that, and the module-scoped seed is shared, so without
+    this the mutating tests corrupt every assertion that follows them.
+    """
+    url = postgres_url()
+    assert url is not None
+    settings = Settings(
+        app_env="test", demo_mode=True, database_url=url, _env_file=None
+    )
+    seed_demo_database(reset=True, settings=settings)
+    try:
+        yield seeded
+    finally:
+        seed_demo_database(reset=True, settings=settings)
 
 
 def _cases(db: Session, status: str) -> list[RecoveryCase]:
@@ -500,3 +525,208 @@ def test_read_path_withholds_a_breakdown_for_rows_written_before_m3r07(
     finally:
         row.erv_fatigue_penalty_minor = original
         session.expunge_all()
+
+
+# --------------------------------------------------------------------------
+# Actually pressing the button
+# --------------------------------------------------------------------------
+#
+# Everything above asserts on selection *metadata*: which action the rule would
+# choose. That is necessary and it is not sufficient, and the gap reached
+# production. Selection correctly offered the rank-2 executable action, the UI
+# rendered a button for it, and the executor refused it with
+# `422 ACTION_NOT_IN_ANALYSIS` because `_load_current_recommendation` still used
+# `rank == 1` as its definition of "selected".
+#
+# Metadata agreed with itself the whole time. The only test that could have
+# caught it is one that submits the action.
+
+
+def _mock_payment_link_client():
+    """A Razorpay client whose transport never leaves the process."""
+    import httpx
+
+    from tests.integrations.razorpay.razorpay_client_helpers import make_mock_client
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST" and "/payment_links" in request.url.path:
+            body = json.loads(request.content.decode())
+            return httpx.Response(
+                200,
+                json={
+                    "id": f"plink_{uuid.uuid4().hex[:12]}",
+                    "reference_id": body["reference_id"],
+                    "amount": body["amount"],
+                    "currency": body["currency"],
+                    "accept_partial": False,
+                    "status": "created",
+                    "short_url": "https://rzp.io/rzp/testonly",
+                },
+            )
+        return httpx.Response(404, json={"error": {"description": "unexpected call"}})
+
+    return make_mock_client(handler)
+
+
+def test_execute_actually_succeeds_on_every_case_that_offers_the_button(
+    freshly_seeded: Engine,
+) -> None:
+    """Submit the action, do not merely inspect what would be submitted.
+
+    This is the regression for the production bug. Every `RECOMMENDED` case
+    renders an enabled Execute control wired to `analysis.selected_action`; each
+    one must be accepted by the executor.
+    """
+    from app.actions.service import RecoveryActionService
+    from app.core.config import Settings
+    from app.domain.enums import AuditActorType
+
+    url = postgres_url()
+    assert url is not None
+    settings = Settings(
+        app_env="test",
+        demo_mode=True,
+        database_url=url,
+        razorpay_key_id="rzp_test_localstub",
+        razorpay_key_secret="localstubsecret",
+        _env_file=None,
+    )
+
+    factory = sessionmaker(bind=freshly_seeded, future=True)
+    with factory() as db:
+        cases = _cases(db, RecoveryCaseStatus.RECOMMENDED.value)
+        assert cases, "no RECOMMENDED cases: this test would vacuously pass"
+        targets = [
+            (case.id, case.current_analysis_run_id, select_candidate_row(
+                _recommendations(db, case)
+            ).action_type)
+            for case in cases
+        ]
+
+    failures: list[tuple[str, str, str]] = []
+    advisory_rank_one_cases = 0
+
+    for case_id, analysis_run_id, action_type in targets:
+        with factory() as db:
+            case = db.get(RecoveryCase, case_id)
+            assert case is not None
+            if not is_executable(RecoveryActionType(
+                top_ranked_row(_recommendations(db, case)).action_type
+            )):
+                advisory_rank_one_cases += 1
+
+            service = RecoveryActionService(
+                db,
+                settings=settings,
+                razorpay_client=_mock_payment_link_client(),
+            )
+            try:
+                service.create_case_action(
+                    case_id=case_id,
+                    organization_id=DEMO_ORGANIZATION_ID,
+                    analysis_run_id=analysis_run_id,
+                    action_type=RecoveryActionType(action_type),
+                    actor_type=AuditActorType.USER,
+                    actor_id="seeded-dataset-test",
+                )
+                db.rollback()
+            except Exception as exc:  # noqa: BLE001 - the point is to report it
+                db.rollback()
+                failures.append((str(case_id), action_type, f"{type(exc).__name__}: {exc}"))
+
+    assert not failures, (
+        "Execute failed on cases whose UI offers the button:\n"
+        + "\n".join(f"  {c} {a} -> {e}" for c, a, e in failures)
+    )
+    assert advisory_rank_one_cases > 0, (
+        "no RECOMMENDED case has an advisory rank 1, so this test would not "
+        "have caught the production regression it exists for"
+    )
+
+
+def test_executor_still_refuses_actions_that_were_not_selected(
+    freshly_seeded: Engine,
+) -> None:
+    """Widening from "rank 1" to "whatever selection chose" must not become
+    "whatever the caller asks for".
+
+    Two distinct refusals, caught by two different guards:
+
+    * an ADVISORY action is stopped by the capability guard before any lookup,
+      with `UnsupportedActionError`;
+    * an EXECUTABLE action that simply is not the selected one reaches
+      `_load_current_recommendation` and is stopped there. This second case is
+      the one the capability guard cannot catch, and is therefore the real test
+      of the fix.
+    """
+    from app.actions.exceptions import (
+        StaleRecommendationError,
+        UnsupportedActionError,
+    )
+    from app.actions.service import RecoveryActionService
+    from app.core.config import Settings
+    from app.domain.enums import AuditActorType
+
+    url = postgres_url()
+    assert url is not None
+    settings = Settings(
+        app_env="test", demo_mode=True, database_url=url, _env_file=None
+    )
+
+    factory = sessionmaker(bind=freshly_seeded, future=True)
+
+    def submit(case, action_type: str) -> None:
+        with factory() as db:
+            service = RecoveryActionService(db, settings=settings)
+            try:
+                service.create_case_action(
+                    case_id=case.id,
+                    organization_id=DEMO_ORGANIZATION_ID,
+                    analysis_run_id=case.current_analysis_run_id,
+                    action_type=RecoveryActionType(action_type),
+                    actor_type=AuditActorType.USER,
+                    actor_id="seeded-dataset-test",
+                )
+            finally:
+                db.rollback()
+
+    with factory() as db:
+        advisory_case = None
+        unselected_case = None
+        for case in _cases(db, RecoveryCaseStatus.RECOMMENDED.value):
+            rows = _recommendations(db, case)
+            top = top_ranked_row(rows)
+            selected = select_candidate_row(rows)
+            if top is None or selected is None:
+                continue
+            if advisory_case is None and not is_executable(
+                RecoveryActionType(top.action_type)
+            ):
+                advisory_case = (case, top.action_type)
+            other_executable = next(
+                (
+                    row.action_type
+                    for row in sorted(rows, key=lambda r: r.rank)
+                    if row.action_type != selected.action_type
+                    and row.action_type != RecoveryActionType.STOP.value
+                    and is_executable(RecoveryActionType(row.action_type))
+                ),
+                None,
+            )
+            if unselected_case is None and other_executable is not None:
+                unselected_case = (case, other_executable)
+            if advisory_case and unselected_case:
+                break
+
+    assert advisory_case is not None, "no case with an advisory rank 1"
+    case, advisory_action = advisory_case
+    with pytest.raises(UnsupportedActionError):
+        submit(case, advisory_action)
+
+    assert unselected_case is not None, (
+        "no case offering a second executable action; the selection guard "
+        "would not be exercised"
+    )
+    case, unselected_action = unselected_case
+    with pytest.raises(StaleRecommendationError):
+        submit(case, unselected_action)
