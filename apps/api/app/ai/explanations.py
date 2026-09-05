@@ -33,6 +33,7 @@ from app.ai.validation import validate_explanation_semantics
 from app.core.config import Settings
 from app.models.recovery_case import RecoveryCase
 from app.models.recovery_recommendation import RecoveryRecommendation
+from app.recovery.selection import select_candidate_row, top_ranked_row
 
 logger = logging.getLogger(__name__)
 
@@ -136,14 +137,27 @@ class RecommendationExplanationService:
                 RecoveryCase.organization_id == organization_id,
             )
         ).scalar_one()
-        recommendation = session.execute(
-            select(RecoveryRecommendation).where(
-                RecoveryRecommendation.case_id == case_id,
-                RecoveryRecommendation.organization_id == organization_id,
-                RecoveryRecommendation.analysis_run_id == analysis_run_id,
-                RecoveryRecommendation.rank == 1,
-            )
-        ).scalar_one()
+        # The explanation must describe the action that will actually be
+        # executed, which is not necessarily rank 1: the model's top choice can
+        # be an advisory action RevLoop does not perform. Reading rank 1 here
+        # would produce an explanation arguing for one action while `selected`
+        # in the same response named another -- the same divergence that was
+        # fixed on the case-detail read path. `select_candidate_row` is the one
+        # shared definition of "selected".
+        candidates = list(
+            session.execute(
+                select(RecoveryRecommendation).where(
+                    RecoveryRecommendation.case_id == case_id,
+                    RecoveryRecommendation.organization_id == organization_id,
+                    RecoveryRecommendation.analysis_run_id == analysis_run_id,
+                )
+            ).scalars()
+        )
+        if not candidates:
+            raise ValueError("No recommendations exist for this analysis run.")
+        recommendation = select_candidate_row(candidates) or top_ranked_row(candidates)
+        if recommendation is None:  # pragma: no cover - defensive
+            raise ValueError("No recommendation could be selected for explanation.")
         if case.current_analysis_run_id != analysis_run_id:
             raise ValueError("Analysis run is not current for case.")
 

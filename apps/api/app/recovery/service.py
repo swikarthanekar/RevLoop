@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
+from app.domain.capabilities import advisory_reason_code, execution_mode
 from app.domain.enums import (
     AnalysisReason,
     CaseType,
@@ -254,7 +255,18 @@ class RecoveryAnalysisService:
         analysis_run_id: UUID | None = None,
         current_time: datetime | None = None,
         excluded_action_types: frozenset[RecoveryActionType] | None = None,
+        downtime_override: DowntimeContext | None = None,
     ) -> AnalysisComputationResult:
+        """Score and rank candidate actions for a case.
+
+        `downtime_override` supplies the rail-health context instead of reading
+        it from the provider. It exists for demo seeding, which must be
+        deterministic and must not issue a live Razorpay call per case: with
+        real credentials configured, seeding 100 cases would otherwise make 100
+        downtime requests and produce a dataset that differed between runs
+        depending on the provider's mood. The live analysis path never passes
+        it, so a real analysis always reads real downtime.
+        """
         run_id = analysis_run_id or uuid.uuid4()
         now = current_time or _utcnow()
         exclusions = excluded_action_types or frozenset()
@@ -266,7 +278,11 @@ class RecoveryAnalysisService:
         recovery_attempts, contacts_last_24h = self._load_recovery_counters(case, now)
         prior_total, prior_recovered = self._load_prior_recovery_counts(case, customer.id)
 
-        downtime = self._resolve_downtime_context(transaction)
+        downtime = (
+            downtime_override
+            if downtime_override is not None
+            else self._resolve_downtime_context(transaction)
+        )
         normalization = self._normalize_failure(
             case,
             transaction,
@@ -356,6 +372,12 @@ class RecoveryAnalysisService:
                     requires_approval=decision.requires_approval,
                     policy_reasons=tuple(reason.value for reason in decision.reasons),
                     operational_burden=OPERATIONAL_BURDEN[action],
+                    execution_mode=execution_mode(action),
+                    advisory_reason_code=advisory_reason_code(action),
+                    action_cost_minor=erv.action_cost_minor,
+                    fatigue_penalty_minor=erv.fatigue_penalty_minor,
+                    operational_risk_penalty_minor=erv.operational_risk_penalty_minor,
+                    delay_penalty_minor=erv.delay_penalty_minor,
                 )
             )
 
@@ -382,6 +404,12 @@ class RecoveryAnalysisService:
                 success_probability=candidate.success_probability,
                 expected_recovered_minor=candidate.expected_recovered_minor,
                 expected_value_minor=candidate.expected_value_minor,
+                erv_action_cost_minor=candidate.action_cost_minor,
+                erv_fatigue_penalty_minor=candidate.fatigue_penalty_minor,
+                erv_operational_risk_penalty_minor=(
+                    candidate.operational_risk_penalty_minor
+                ),
+                erv_delay_penalty_minor=candidate.delay_penalty_minor,
                 confidence=candidate.confidence,
                 policy_eligible=candidate.eligible,
                 requires_approval=candidate.requires_approval,

@@ -4,6 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.domain.capabilities import ActionExecutionMode
 from app.schemas.common import PaginatedResponse
 from app.schemas.recovery_actions import CustomerActionResponse
 
@@ -80,6 +81,23 @@ class RecommendationFactor(BaseModel):
     source: str
 
 
+class ERVBreakdownResponse(BaseModel):
+    """Component arithmetic for one candidate's expected value.
+
+    `expected_recovered_minor` less every penalty equals `expected_value_minor`
+    exactly; the server refuses to emit this object at all when the stored
+    components do not reconcile, so a client can render the subtraction without
+    checking it.
+    """
+
+    expected_recovered_minor: int
+    action_cost_minor: int
+    fatigue_penalty_minor: int
+    operational_risk_penalty_minor: int
+    delay_penalty_minor: int
+    expected_value_minor: int
+
+
 class RecommendationCandidate(BaseModel):
     action_type: str
     rank: int
@@ -90,6 +108,18 @@ class RecommendationCandidate(BaseModel):
     requires_approval: bool
     policy_reasons: list[str]
     factors: list[RecommendationFactor]
+    #: Derived from `action_type` on read rather than stored per row, because
+    #: capability is a property of the action type and of this deployment, not
+    #: of a historical analysis. Deriving it means a row written before the
+    #: capability registry existed still reports the truth today, and there is
+    #: no persisted copy that can go stale.
+    execution_mode: ActionExecutionMode
+    advisory_reason_code: str | None = None
+    advisory_reason: str | None = None
+    #: The arithmetic behind `expected_value_minor`, when it was persisted.
+    #: Absent for rows written before the components were stored -- a client
+    #: must then omit the breakdown rather than reconstruct it.
+    erv_breakdown: ERVBreakdownResponse | None = None
 
 
 class StructuredExplanation(BaseModel):
@@ -102,8 +132,14 @@ class CaseAnalysis(BaseModel):
     analysis_run_id: UUID
     model_version: str
     feature_schema_version: str
+    #: The action the Execute control targets. Always one RevLoop can perform.
     selected_action: str
     confidence: float
+    #: The model's actual top-ranked action, which may be advisory and so may
+    #: differ from `selected_action`. Served explicitly rather than left for the
+    #: client to infer from the candidate list, so the UI never has to
+    #: reimplement the selection rule to explain the difference.
+    top_ranked_action: str
     candidates: list[RecommendationCandidate]
     structured_explanation: StructuredExplanation
 

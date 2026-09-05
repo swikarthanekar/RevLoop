@@ -26,7 +26,10 @@ class ActionBlockedByPolicyError(RecoveryActionError):
 
 
 class UnsupportedActionError(RecoveryActionError):
-    """Raised when Prompt 16 does not execute the requested action type."""
+    """Raised when RevLoop has no mechanism to execute the requested action type.
+
+    See `app.domain.capabilities` for which actions are advisory and why.
+    """
 
 
 class ActionConflictError(RecoveryActionError):
