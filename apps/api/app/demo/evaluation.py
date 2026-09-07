@@ -1,20 +1,20 @@
-"""Demo batch evaluation — a thin adapter over the canonical Prompt 11 evaluator.
+"""Demo batch evaluation — a thin adapter over the canonical offline evaluator.
 
 This module deliberately contains NO synthetic-world methodology of its own.
 
-Prompt 10 owns the synthetic generator (case features, hidden latent
-probability, Bernoulli label sampling, deterministic split). Prompt 11 owns the
+`scripts/ml` owns the synthetic generator (case features, hidden latent
+probability, Bernoulli label sampling, deterministic split) and owns the
 offline policy simulation (frozen-model scoring, production policy/ranking, the
-naive baseline, and the metric aggregation). Prompt 23's only job is to select a
-deterministic cohort, invoke the canonical evaluator, and hand the result to the
+naive baseline, and the metric aggregation). This module's only job is to
+select a deterministic cohort, invoke the canonical evaluator, and hand the result to the
 HTTP layer.
 
 Consequences worth stating explicitly:
 
 - There is no second latent-probability model here, no Bernoulli resampling and
   no hash-derived outcome draws. The evaluation reuses the
-  ``synthetic_latent_probability`` and ``recovered_within_72h`` values Prompt 10
-  already generated for each (case, action) row.
+  ``synthetic_latent_probability`` and ``recovered_within_72h`` values the
+  generator already produced for each (case, action) row.
 - Candidate scoring uses the frozen selected Logistic Regression artifact
   (``lr-v1.0.0``). The heuristic fallback is never used here; if the trusted
   model cannot load or score, the batch fails closed rather than reporting
@@ -124,7 +124,7 @@ def demo_cohort_frame(case_count: int = DEMO_BATCH_CASE_COUNT):
 
 
 def run_canonical_batch(case_count: int = DEMO_BATCH_CASE_COUNT) -> CanonicalBatchResult:
-    """Run the canonical Prompt 11 policy simulation over the demo cohort.
+    """Run the canonical offline policy simulation over the demo cohort.
 
     Every number returned is produced by ``simulate_policy_on_test_cases``; this
     function only assembles its inputs and records what they were.

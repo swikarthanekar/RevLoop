@@ -1,4 +1,4 @@
-"""Prompt 24 — P0 integration proof.
+"""P0 integration proof.
 
 Every assertion goes through a public boundary: the signed webhook HTTP
 endpoint, the analysis/action/approval REST API, and the timeline and dashboard
@@ -590,7 +590,7 @@ def test_success_with_mismatched_amount_does_not_recover(
 def test_timeline_never_exposes_raw_webhook_input(
     client, db_session, customer_external_id
 ) -> None:
-    """Prompt 22 allowlisting still holds for events produced by the real flow."""
+    """Timeline allowlisting still holds for events produced by the real flow."""
     suffix = unique_suffix()
     payment_id = f"pay_sentinel_{suffix}"
     assert (
@@ -678,7 +678,7 @@ def test_other_tenant_cannot_read_the_case_or_see_its_revenue(
 
 
 # ---------------------------------------------------------------------------
-# LLM-disabled and Prompt 23 separation
+# LLM-disabled and demo-evaluation separation
 # ---------------------------------------------------------------------------
 
 
@@ -761,7 +761,7 @@ def test_recovery_workflow_operates_with_the_llm_disabled(
 def test_synthetic_demo_batch_does_not_touch_business_data_or_dashboard(
     client, db_session
 ) -> None:
-    """Prompt 23 evaluation stays read-only and out of business analytics."""
+    """Demo evaluation stays read-only and out of business analytics."""
 
     def business_counts() -> tuple[int, int, int]:
         return (

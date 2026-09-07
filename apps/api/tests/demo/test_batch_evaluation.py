@@ -1,13 +1,13 @@
 """Canonical correctness tests for the demo batch evaluation.
 
-These replace the earlier Prompt 23 tests that validated a second, locally
+These replace earlier tests that validated a second, locally
 invented synthetic world (BLAKE2b outcome draws, local latent coefficients,
 fallback-as-normal-scorer, probability inequality as "leakage proof"). That
 methodology was removed, so the tests that only existed to defend it were
 removed with it.
 
-What is asserted here instead: the batch reuses the canonical Prompt 10
-generator and the canonical Prompt 11 evaluator, scores with the frozen selected
+What is asserted here instead: the batch reuses the canonical
+generator and the canonical offline evaluator, scores with the frozen selected
 Logistic Regression, never touches the heuristic fallback on a healthy run, and
 keeps ground truth strictly out of the decision path.
 """
@@ -176,7 +176,7 @@ def test_bridge_exposes_the_actual_canonical_modules(modules) -> None:
 
 
 def test_canonical_generator_parity(modules) -> None:
-    """Prompt 23's dataset equals a direct canonical generation, row for row."""
+    """The batch dataset equals a direct canonical generation, row for row."""
     common = modules.common
     direct = common.generate_dataset(
         case_count=common.DEFAULT_CASE_COUNT,
@@ -252,7 +252,7 @@ def test_larger_cohort_is_a_superset_of_the_smaller_one() -> None:
 
 
 def test_canonical_evaluator_parity(modules, bundle, small_result) -> None:
-    """Prompt 23's numbers equal the accepted Prompt 11 evaluator's numbers."""
+    """The batch numbers equal the accepted offline evaluator's numbers."""
     direct = modules.evaluate.simulate_policy_on_test_cases(
         frame=demo_cohort_frame(SMALL_COHORT),
         pipeline=bundle.pipeline,
@@ -448,7 +448,7 @@ def test_non_pending_subscription_states_never_activate_provider_retries() -> No
 
 
 def test_production_uses_the_pending_status_constant() -> None:
-    """The production semantic Prompt 23 must not reimplement."""
+    """The production semantic the batch evaluation must not reimplement."""
     from app.recovery.service import SUBSCRIPTION_PENDING_STATUS
 
     assert SUBSCRIPTION_PENDING_STATUS == "pending"
@@ -465,8 +465,8 @@ def test_downtime_is_an_explicit_canonical_feature() -> None:
 
     In the canonical generator a verified active downtime sets both
     `rail_degraded` and the PAYMENT_RAIL_DOWNTIME category together, so the two
-    coincide in the data. That is the generator's decision. What matters for
-    Prompt 23 is that it consumes the explicit feature rather than re-deriving
+    coincide in the data. That is the generator's decision. What matters here is
+    that the batch consumes the explicit feature rather than re-deriving
     downtime from the category, which is asserted separately below.
     """
     common = canonical_modules().common
@@ -526,7 +526,7 @@ def test_baseline_prefers_retry_then_wait_then_stop(modules) -> None:
 
 
 def test_baseline_is_the_canonical_implementation(modules) -> None:
-    """Not a Prompt 23 copy."""
+    """Not a demo-side copy."""
     assert "select_naive_baseline" not in demo_source_text()
     assert callable(modules.evaluate.select_naive_baseline)
 

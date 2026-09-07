@@ -1,4 +1,4 @@
-"""Razorpay HTTP client tests (Prompt 15)."""
+"""Razorpay HTTP client tests."""
 
 from __future__ import annotations
 

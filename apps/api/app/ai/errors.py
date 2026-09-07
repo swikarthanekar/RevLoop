@@ -1,4 +1,4 @@
-"""AI provider failure classifications (Prompt 17)."""
+"""AI provider failure classifications."""
 
 from __future__ import annotations
 

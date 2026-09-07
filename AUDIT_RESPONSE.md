@@ -49,7 +49,7 @@ of executability.
 | Executor's refusal to run `RETRY_SAME_METHOD` / `SEND_RECOVERY_MESSAGE` | **KEEP** | A documented P0 boundary. The executor must never trust its caller about its own capabilities. |
 | `select_recommendation` ignoring executability | **CHANGE** | `apps/api/app/recovery/ranking.py`. Selection is now narrower than ranking: the selected action must be eligible **and** executable. |
 | Candidate generation including advisory actions | **KEEP** | Dropping them would hide a real model output. `docs/RECOVERY_ENGINE.md` §5.2 lists `RETRY_SAME_METHOD` in the candidate matrix for authentication and technical failures, and the model genuinely prefers it there. |
-| `PROMPT16_EXECUTABLE`, and the message *"not executable in Prompt 16"* | **CHANGE** | Internal prompt numbering leaking through a public API. Replaced by `app/domain/capabilities.py`; the message now names the capability gap. |
+| An internal build-stage identifier, and the message *"not executable"* citing it | **CHANGE** | An internal build-stage label leaking through a public API. Replaced by `app/domain/capabilities.py`; the message now names the capability gap. |
 | The 422 guard itself | **KEEP** | Now unreachable through the UI, retained as defence in depth. |
 | Frontend rendering 422 as *"Validation failed — review the input"* | **CHANGE** | Meaningless on a screen with no input. `ACTION_NOT_EXECUTABLE` and six sibling codes now map to real explanations. |
 
@@ -194,7 +194,7 @@ Re-verified: all `200`. Kept deliberately. For a hackathon this is a net
 positive — it lets a judge inspect the API surface, which is a strength here
 rather than a liability. Nothing behind those paths is reachable without a
 verified Supabase token, and the one internal string that leaked through them
-("in Prompt 16") is gone. Revisit before any real deployment.
+(an internal build-stage label) is gone. Revisit before any real deployment.
 
 ### H7 — Latency — **partially addressed, see §5**
 

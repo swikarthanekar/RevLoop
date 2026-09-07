@@ -718,7 +718,7 @@ def read_csv_rows(path: Path) -> list[dict[str, str]]:
 
 
 # ---------------------------------------------------------------------------
-# Prompt 11 — ML training/evaluation shared constants and helpers
+# ML training/evaluation shared constants and helpers
 # ---------------------------------------------------------------------------
 
 MODEL_VERSION = "lr-v1.0.0"
@@ -738,7 +738,7 @@ LOGISTIC_REGRESSION_CONFIG: dict[str, object] = {
     "class_weight": None,
 }
 
-# Frozen Prompt 11 Logistic Regression reference metrics (immutable during Prompt 12).
+# Frozen Logistic Regression reference metrics (immutable during challenger evaluation).
 FROZEN_LR_ARTIFACT_SHA256 = (
     "152ecbc8ab4e5bc5b583059a824ea562363f920e238b4b7aa283d9cb74447ef2"
 )
@@ -758,7 +758,7 @@ FROZEN_LR_TEST_METRICS: dict[str, float] = {
 }
 FROZEN_LR_POLICY_EXPECTED_RECOVERED = 1_028_844_436
 
-# Prompt 12 — restrained XGBoost challenger configuration.
+# Restrained XGBoost challenger configuration.
 XGBOOST_MODEL_VERSION = "xgb-v1.0.0"
 XGBOOST_MODEL_FAMILY = "xgboost"
 XGBOOST_EARLY_STOPPING_ROUNDS = 50
@@ -1030,7 +1030,7 @@ def validate_dataset_summary(summary: dict[str, Any]) -> None:
 
     feature_columns = summary.get("feature_columns")
     if list(feature_columns) != list(FEATURE_COLUMNS):
-        raise ValueError("Dataset summary feature_columns do not match Prompt 10 contract.")
+        raise ValueError("Dataset summary feature_columns do not match the generator contract.")
 
     evaluation_only = summary.get("evaluation_only_columns")
     if "synthetic_latent_probability" not in evaluation_only:

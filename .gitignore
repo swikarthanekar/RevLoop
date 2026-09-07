@@ -52,6 +52,10 @@ npm-debug.log*
 *.pkl
 !apps/api/app/ml/artifacts/recovery_model.joblib
 
+# Editor/agent configuration. Kept locally so the rules still apply while
+# working; it configures a tool rather than describing the product.
+.cursor/
+
 # Presentation and build-process artifacts. Kept locally, deliberately not
 # published: CURSOR_PROMPTS.md is the agent prompt sequence used to build the
 # project, and the pitch script is word-for-word recording narration. Neither

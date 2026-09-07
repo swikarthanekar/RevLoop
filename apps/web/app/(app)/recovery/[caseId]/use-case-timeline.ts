@@ -36,7 +36,7 @@ function toApiError(error: unknown): ApiError {
 /**
  * Read-only audit timeline loader.
  *
- * Deliberately has no polling of its own: Prompt 21's `useCaseDetail` owns the
+ * Deliberately has no polling of its own: `useCaseDetail` owns the
  * bounded WAITING_FOR_OUTCOME poll, and a second competing loop is not
  * documented as a requirement. The timeline refreshes on mount, on an explicit
  * user refresh, and when the case detail reports a new version.

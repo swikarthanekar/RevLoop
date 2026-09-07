@@ -1,4 +1,4 @@
-"""Recovery analysis hardening tests (Prompt 13 acceptance)."""
+"""Recovery analysis hardening tests (acceptance)."""
 
 from __future__ import annotations
 

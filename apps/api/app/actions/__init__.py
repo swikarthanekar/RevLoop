@@ -1,1 +1,1 @@
-"""Recovery action execution (Prompt 16)."""
+"""Recovery action execution."""

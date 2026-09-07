@@ -1,8 +1,8 @@
-# Model Selection — Prompt 12
+# Model Selection
 
 ## Context
 
-Prompt 12 compared the frozen Prompt 11 Logistic Regression recovery baseline against one restrained XGBoost challenger (`xgb-v1.0.0`). Selection used predeclared materiality thresholds and regression guardrails on held-out synthetic test data and synthetic policy simulation.
+This evaluation compared the frozen Logistic Regression recovery baseline against one restrained XGBoost challenger (`xgb-v1.0.0`). Selection used predeclared materiality thresholds and regression guardrails on held-out synthetic test data and synthetic policy simulation.
 
 ## Dataset
 
@@ -19,7 +19,7 @@ Split discipline: train 10,500 cases / 30,981 predictive rows; validation 2,250 
 
 ## Logistic Regression
 
-Frozen Prompt 11 reference (`LR source commit = fd08bf7`).
+Frozen baseline reference (`LR source commit = fd08bf7`).
 
 **Validation metrics**
 
@@ -43,7 +43,7 @@ Frozen Prompt 11 reference (`LR source commit = fd08bf7`).
 
 Canonical artifact SHA-256: `152ecbc8ab4e5bc5b583059a824ea562363f920e238b4b7aa283d9cb74447ef2`
 
-Logistic Regression was **not** retrained during Prompt 12. Re-evaluation on the reproduced dataset matched Prompt 11 within deterministic tolerance.
+Logistic Regression was **not** retrained during the challenger evaluation. Re-evaluation on the reproduced dataset matched the frozen baseline within deterministic tolerance.
 
 ## XGBoost candidate
 

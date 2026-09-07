@@ -1,4 +1,4 @@
-"""Razorpay read-client composition for recovery analysis (Prompt 15)."""
+"""Razorpay read-client composition for recovery analysis."""
 
 from __future__ import annotations
 

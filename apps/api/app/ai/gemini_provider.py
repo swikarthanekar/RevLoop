@@ -1,4 +1,4 @@
-"""Gemini structured-output provider using google-genai (Prompt 17)."""
+"""Gemini structured-output provider using google-genai."""
 
 from __future__ import annotations
 

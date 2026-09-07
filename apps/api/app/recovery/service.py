@@ -1,4 +1,4 @@
-"""Recovery analysis orchestration service (Prompt 13)."""
+"""Recovery analysis orchestration service."""
 
 from __future__ import annotations
 

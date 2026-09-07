@@ -1,4 +1,4 @@
-"""Razorpay Payment Link adapter (Prompt 16)."""
+"""Razorpay Payment Link adapter."""
 
 from __future__ import annotations
 
@@ -114,7 +114,7 @@ def fetch_payment_links_by_reference(
     amount_minor: int,
     currency: str,
 ) -> PaymentLinkReconciliationOutcome:
-    """Safe GET reconciliation by stable reference_id (bounded Prompt 15 GET retries)."""
+    """Safe GET reconciliation by stable reference_id (bounded read-client GET retries)."""
     payload = client.get_json(client.get_payment_links_by_reference_path(reference_id))
     try:
         lookup = PaymentLinkLookupResult.from_collection_json(payload)

@@ -1,4 +1,4 @@
-"""Prompt 09 final hardening regression tests."""
+"""Recovery-analysis final hardening regression tests."""
 
 from __future__ import annotations
 

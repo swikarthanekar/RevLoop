@@ -1,4 +1,4 @@
-"""Provider webhook event orchestration (Prompt 14)."""
+"""Provider webhook event orchestration."""
 
 from __future__ import annotations
 

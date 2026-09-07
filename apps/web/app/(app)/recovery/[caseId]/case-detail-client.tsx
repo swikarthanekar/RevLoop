@@ -57,7 +57,7 @@ export function CaseDetailClient({ caseId, apiClient }: CaseDetailClientProps) {
     isRefreshing: isTimelineRefreshing,
   } = useCaseTimeline(caseId, client);
 
-  // Unchanged from Prompt 21: the mutation chain still awaits only the
+  // The mutation chain still awaits only the
   // case-detail fetch. The timeline is deliberately NOT awaited here, so a slow
   // or failing timeline read cannot alter mutation, conflict or polling
   // behaviour.

@@ -1,4 +1,4 @@
-"""Razorpay webhook HTTP route (Prompt 14)."""
+"""Razorpay webhook HTTP route."""
 
 from __future__ import annotations
 

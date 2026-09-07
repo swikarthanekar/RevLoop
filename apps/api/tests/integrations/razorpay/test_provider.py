@@ -1,4 +1,4 @@
-"""Razorpay provider composition tests (Prompt 15 hardening)."""
+"""Razorpay provider composition tests (hardening)."""
 
 from __future__ import annotations
 

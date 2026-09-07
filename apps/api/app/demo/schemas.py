@@ -1,6 +1,6 @@
 """Response contracts for the demo-only endpoints (docs/API_CONTRACTS.md section 12).
 
-Field names deliberately mirror the canonical Prompt 11 synthetic-evaluation
+Field names deliberately mirror the canonical synthetic-evaluation
 vocabulary (``expected_synthetic_recovered_minor``,
 ``realized_synthetic_recovered_minor``, ``realized_recovery_rate``,
 ``selected_intervention_count``) rather than generic revenue names. Synthetic

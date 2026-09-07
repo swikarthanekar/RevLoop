@@ -1,4 +1,4 @@
-"""Recovery action API tests (Prompt 16)."""
+"""Recovery action API tests."""
 
 from __future__ import annotations
 
@@ -682,7 +682,7 @@ def test_escalate_to_human_requires_approval_and_never_calls_the_provider(
 def test_request_alternate_payment_method_executes_immediately(
     action_client, db_session
 ) -> None:
-    """REQUEST_ALTERNATE_PAYMENT_METHOD is executable (Prompt 27 hardening):
+    """REQUEST_ALTERNATE_PAYMENT_METHOD is executable (hardening):
     it shares CREATE_PAYMENT_LINK's Payment Link mechanism (a Standard
     Payment Link's checkout page already lets the customer pick any
     available method), but its own action_type label must be preserved end

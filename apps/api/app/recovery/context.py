@@ -1,4 +1,4 @@
-"""Recovery downtime context resolution using Razorpay reads (Prompt 15)."""
+"""Recovery downtime context resolution using Razorpay reads."""
 
 from __future__ import annotations
 

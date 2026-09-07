@@ -1,4 +1,4 @@
-"""Runtime wiring tests for Razorpay downtime reads on /analyze (Prompt 15 hardening)."""
+"""Runtime wiring tests for Razorpay downtime reads on /analyze (hardening)."""
 
 from __future__ import annotations
 

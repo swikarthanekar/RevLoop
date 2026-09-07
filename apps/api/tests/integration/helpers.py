@@ -1,4 +1,4 @@
-"""Shared helpers for the Prompt 24 P0 integration suite."""
+"""Shared helpers for the P0 integration suite."""
 
 from __future__ import annotations
 

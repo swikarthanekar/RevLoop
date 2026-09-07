@@ -1,4 +1,4 @@
-"""Prompt 11 Logistic Regression baseline training and evaluation tests."""
+"""Logistic Regression baseline training and evaluation tests."""
 
 from __future__ import annotations
 

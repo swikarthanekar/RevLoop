@@ -1,4 +1,4 @@
-"""Recovery action routes (Prompt 16)."""
+"""Recovery action routes."""
 
 from __future__ import annotations
 

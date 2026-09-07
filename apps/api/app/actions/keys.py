@@ -1,4 +1,4 @@
-"""Deterministic recovery-action identity helpers (Prompt 16)."""
+"""Deterministic recovery-action identity helpers."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ def build_action_idempotency_key(
 
 
 def build_payment_link_reference_id(action_id: UUID) -> str:
-    """Stable Razorpay reference_id (<= 40 chars) for Prompt 14 correlation."""
+    """Stable Razorpay reference_id (<= 40 chars) for webhook correlation."""
     reference = f"rl_{action_id.hex}"
     if len(reference) > 40:
         raise ValueError("payment link reference_id exceeds provider limit")

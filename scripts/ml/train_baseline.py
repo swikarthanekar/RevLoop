@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Train Logistic Regression recovery propensity baseline (Prompt 11)."""
+"""Train Logistic Regression recovery propensity baseline."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""ML artifact metadata schemas (Prompt 11 — no runtime inference service yet)."""
+"""ML artifact metadata schemas (no runtime inference service yet)."""
 
 from __future__ import annotations
 

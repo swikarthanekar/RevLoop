@@ -1,4 +1,4 @@
-"""Prompt 14 final micro-hardening regression tests."""
+"""Webhook final micro-hardening regression tests."""
 
 from __future__ import annotations
 

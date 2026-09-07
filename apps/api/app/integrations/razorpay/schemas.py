@@ -1,4 +1,4 @@
-"""Narrow Razorpay webhook payload schemas (Prompt 14)."""
+"""Narrow Razorpay webhook payload schemas."""
 
 from __future__ import annotations
 
@@ -103,7 +103,7 @@ class RazorpayWebhookEnvelope(BaseModel):
         return RazorpayPaymentLinkEntity.model_validate(entity)
 
 
-# --- Prompt 15: HTTP API read DTOs ---
+# --- HTTP API read DTOs ---
 
 
 class RazorpayPaymentRead(BaseModel):

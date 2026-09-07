@@ -99,7 +99,7 @@ function readOnlyClient(detail: unknown) {
 /**
  * Case-detail reads only.
  *
- * The page also embeds the Prompt 22 audit timeline, which issues its own GET
+ * The page also embeds the audit timeline, which issues its own GET
  * to `/timeline` through the same client. Excluding it keeps these assertions
  * measuring case-detail fetching and polling specifically.
  */

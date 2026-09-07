@@ -1,4 +1,4 @@
-"""Fixtures for the Prompt 24 P0 integration suite.
+"""Fixtures for the P0 integration suite.
 
 One FastAPI app instance carries the whole flow so that a single client can post
 the failure webhook, analyze, act, and post the success webhook exactly as a real

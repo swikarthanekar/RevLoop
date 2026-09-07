@@ -1,4 +1,4 @@
-"""Razorpay payment read adapter (Prompt 15)."""
+"""Razorpay payment read adapter."""
 
 from __future__ import annotations
 

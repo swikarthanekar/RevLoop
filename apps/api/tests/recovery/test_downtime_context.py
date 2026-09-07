@@ -1,4 +1,4 @@
-"""Recovery downtime context integration tests (Prompt 15)."""
+"""Recovery downtime context integration tests."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Trusted local recovery propensity model runtime service (Prompt 13)."""
+"""Trusted local recovery propensity model runtime service."""
 
 from __future__ import annotations
 

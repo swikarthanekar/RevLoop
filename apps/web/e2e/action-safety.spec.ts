@@ -1,5 +1,5 @@
 /**
- * Prompt 25 — browser-level safety regressions for recovery actions.
+ * Browser-level safety regressions for recovery actions.
  *
  * These complement the critical journey: they prove that rapid duplicate
  * interaction stays exactly-once at both the action-creation and the approval

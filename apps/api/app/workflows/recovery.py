@@ -1,4 +1,4 @@
-"""Workflow orchestration for recovery case analysis (Prompt 13)."""
+"""Workflow orchestration for recovery case analysis."""
 
 from __future__ import annotations
 

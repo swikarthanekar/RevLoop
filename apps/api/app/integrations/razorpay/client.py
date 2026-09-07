@@ -1,4 +1,4 @@
-"""Razorpay HTTP client for read-only API integration (Prompt 15)."""
+"""Razorpay HTTP client for read-only API integration."""
 
 from __future__ import annotations
 

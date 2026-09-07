@@ -1,4 +1,4 @@
-"""Recovery action API schemas (Prompt 16)."""
+"""Recovery action API schemas."""
 
 from __future__ import annotations
 

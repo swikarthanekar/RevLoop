@@ -1,4 +1,4 @@
-"""Razorpay webhook signature verification (Prompt 14)."""
+"""Razorpay webhook signature verification."""
 
 from __future__ import annotations
 

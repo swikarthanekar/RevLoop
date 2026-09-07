@@ -1,4 +1,4 @@
-"""Pydantic schemas for LLM explanation and outreach (Prompt 17)."""
+"""Pydantic schemas for LLM explanation and outreach."""
 
 from __future__ import annotations
 

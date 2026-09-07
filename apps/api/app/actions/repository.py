@@ -1,4 +1,4 @@
-"""Recovery action persistence (Prompt 16)."""
+"""Recovery action persistence."""
 
 from __future__ import annotations
 

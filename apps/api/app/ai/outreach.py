@@ -1,4 +1,4 @@
-"""Outreach draft generation service (Prompt 17)."""
+"""Outreach draft generation service."""
 
 from __future__ import annotations
 

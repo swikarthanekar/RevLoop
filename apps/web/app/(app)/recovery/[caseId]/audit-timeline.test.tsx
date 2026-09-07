@@ -510,7 +510,7 @@ describe("AuditTimeline — error containment and refresh", () => {
     renderPage(client);
     await findCaseHeading();
 
-    // Prompt 21 UI is unaffected.
+    // The case-detail UI is unaffected.
     expect(screen.getByRole("button", { name: "Execute recovery" })).toBeEnabled();
     expect(screen.getByLabelText("Status: Recommended")).toBeInTheDocument();
     expect(
@@ -540,7 +540,7 @@ describe("AuditTimeline — error containment and refresh", () => {
     expect(calls.every((call) => call.method === "GET")).toBe(true);
   });
 
-  it("does not disturb Prompt 21 mutation behavior", async () => {
+  it("does not disturb case-detail mutation behavior", async () => {
     const { client, calls } = buildClient((call) => {
       if (isTimelineUrl(call.url)) {
         return { status: 200, body: { items: timelineFixture } };

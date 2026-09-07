@@ -1,5 +1,5 @@
 /**
- * Prompt 25 — the critical P0 recovery journey through a real browser.
+ * The critical P0 recovery journey through a real browser.
  *
  * The browser drives the real frontend, which talks to the real FastAPI
  * backend. No application API response is mocked or intercepted. Provider

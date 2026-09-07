@@ -56,7 +56,7 @@ infra/
 README.md
 ```
 
-Move/copy the authoritative root docs only if the chosen repository organization keeps them at root; do not hide them where Cursor misses them.
+Keep the authoritative specifications discoverable from the repository root; do not bury them where a reader or tool will miss them.
 
 ## Tasks
 - initialize Next.js TypeScript app;
@@ -66,7 +66,6 @@ Move/copy the authoritative root docs only if the chosen repository organization
 - add `.env.example` with placeholders only;
 - add backend `/health` skeleton;
 - add root README with local boot commands;
-- ensure `.cursor/rules/architecture.mdc` is active;
 - no DB models yet.
 
 ## Tests

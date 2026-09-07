@@ -1,4 +1,4 @@
-"""Prompt 12 model-selection helper regression tests."""
+"""Model-selection helper regression tests."""
 
 from __future__ import annotations
 

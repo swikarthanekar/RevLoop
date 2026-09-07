@@ -205,15 +205,13 @@ apps/api/     FastAPI modular monolith (recovery engine, workflows, policies, ML
 data/         Synthetic/demo data
 scripts/      Seed and ML training scripts
 docs/         Engineering specifications (see below)
-infra/        Local/deployment placeholders
 ```
 
 ### Engineering documentation
 
 The specifications below are treated as binding contracts rather than notes:
-the modules that implement them cite them by name in source comments, and
-`.cursor/rules/architecture.mdc` requires reading the relevant one before
-changing that area.
+the modules that implement them cite them by name in source comments, so a
+change to the behaviour and a change to its specification travel together.
 
 | Document | Covers |
 |---|---|

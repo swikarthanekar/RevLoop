@@ -113,7 +113,7 @@ def test_development_auth_without_configured_ids_refuses_to_grant_a_role() -> No
 
 
 def test_production_pins_the_canonical_razorpay_host() -> None:
-    """The Prompt 25 local provider stub override cannot follow into production."""
+    """The local provider stub override cannot follow into production."""
     assert production_settings().razorpay_api_base_url == "https://api.razorpay.com"
 
     with pytest.raises(ValidationError):

@@ -1,7 +1,7 @@
-"""Single controlled bridge to the canonical Prompt 10/11 synthetic ML pipeline.
+"""Single controlled bridge to the canonical synthetic ML pipeline.
 
-Prompt 23 must not own a second synthetic world. The canonical synthetic
-generator (Prompt 10) and the canonical offline policy simulator (Prompt 11)
+The demo evaluation must not own a second synthetic world. The canonical synthetic
+generator and the canonical offline policy simulator
 already exist under ``scripts/ml`` and are the accepted implementations that the
 frozen Logistic Regression was trained and evaluated against. This module is the
 only place that reaches them, so there is exactly one methodology in the
@@ -79,7 +79,7 @@ def _ensure_scripts_on_path() -> None:
 
 @dataclass(frozen=True)
 class CanonicalModules:
-    """The canonical Prompt 10/11 callables, imported once."""
+    """The canonical generator/evaluator callables, imported once."""
 
     common: Any
     train_baseline: Any
@@ -101,7 +101,7 @@ def canonical_modules() -> CanonicalModules:
 
 @dataclass(frozen=True)
 class CanonicalDataset:
-    """The canonical Prompt 10 dataset loaded through the canonical reader."""
+    """The canonical training dataset loaded through the canonical reader."""
 
     frame: pd.DataFrame
     summary: dict[str, Any]
@@ -119,7 +119,7 @@ def canonical_dataset() -> CanonicalDataset:
     canonical generator at the canonical seed and case count, then read back
     through the canonical ``load_training_frame`` reader. Going through the
     reader (rather than building a DataFrame from raw rows) guarantees the exact
-    dtypes and column validation the Prompt 11 evaluator was accepted against.
+    dtypes and column validation the offline evaluator was accepted against.
 
     The temporary directory is removed immediately; nothing is written into the
     repository.

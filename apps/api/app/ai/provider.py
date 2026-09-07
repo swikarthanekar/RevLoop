@@ -1,4 +1,4 @@
-"""LLM provider protocol and test doubles (Prompt 17)."""
+"""LLM provider protocol and test doubles."""
 
 from __future__ import annotations
 

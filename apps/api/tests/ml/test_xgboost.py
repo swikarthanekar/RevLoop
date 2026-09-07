@@ -1,4 +1,4 @@
-"""Prompt 12 XGBoost challenger training and evaluation tests."""
+"""XGBoost challenger training and evaluation tests."""
 
 from __future__ import annotations
 

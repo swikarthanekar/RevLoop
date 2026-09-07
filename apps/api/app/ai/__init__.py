@@ -1,4 +1,4 @@
-"""LLM explanation and outreach services (Prompt 17)."""
+"""LLM explanation and outreach services."""
 
 from app.ai.explanations import RecommendationExplanationService
 from app.ai.outreach import OutreachDraftService

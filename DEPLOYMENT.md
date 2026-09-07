@@ -252,7 +252,7 @@ mirrored into Vercel.
 | `GEMINI_API_KEY` | Gemini key | optional, see [section 8](#8-gemini) |
 
 Do **not** set `RAZORPAY_API_BASE_URL`. Leaving it unset pins the canonical host
-`https://api.razorpay.com`. The Prompt 25 localhost provider stub override
+`https://api.razorpay.com`. The browser-suite localhost provider stub override
 exists only for the browser test suite.
 
 `MODEL_BUNDLE_PATH` is already set by the image and does not need an override.
@@ -530,7 +530,7 @@ failure rolls back rather than leaving a half-reset database.
 | --- | --- |
 | Primary | Live Vercel + Railway + Supabase + Razorpay Test Mode |
 | Backup A | The deployed app on deterministic demo state, presenting the synthetic batch evidence, which is labeled synthetic in the UI |
-| Backup B | The local Playwright/demo path from Prompt 25, run against the local stack |
+| Backup B | The local Playwright/demo path, run against the local stack |
 | Backup C | A screen recording of a successful end-to-end run |
 
 Synthetic results stay visibly labeled as synthetic in every fallback. Never

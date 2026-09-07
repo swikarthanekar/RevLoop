@@ -1,4 +1,4 @@
-"""Recovery action domain errors (Prompt 16)."""
+"""Recovery action domain errors."""
 
 
 class RecoveryActionError(Exception):

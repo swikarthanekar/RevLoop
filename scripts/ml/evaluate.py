@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evaluate trusted Logistic Regression baseline on held-out test data (Prompt 11)."""
+"""Evaluate trusted Logistic Regression baseline on held-out test data."""
 
 from __future__ import annotations
 

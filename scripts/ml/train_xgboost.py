@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Train restrained XGBoost recovery propensity challenger (Prompt 12)."""
+"""Train restrained XGBoost recovery propensity challenger."""
 
 from __future__ import annotations
 
