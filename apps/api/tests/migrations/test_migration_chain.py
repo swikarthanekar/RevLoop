@@ -15,6 +15,7 @@ REVISIONS = [
     ("m3r05_recovery_outcomes", "m3r04_recovery_decisions"),
     ("m3r06_webhooks_audit_policy", "m3r05_recovery_outcomes"),
     ("m3r07_erv_breakdown", "m3r06_webhooks_audit_policy"),
+    ("m3r08_enable_rls", "m3r07_erv_breakdown"),
 ]
 
 EXPECTED_TABLES = {
@@ -68,6 +69,29 @@ def test_migration_files_create_all_thirteen_application_tables() -> None:
     combined = "\n".join(_revision_source(rev_id) for rev_id, _ in REVISIONS)
     for table in EXPECTED_TABLES:
         assert f'CREATE TABLE {table}' in combined or f'CREATE TABLE {table} (' in combined
+
+
+def test_revision_eight_enables_rls_on_every_public_table() -> None:
+    """Supabase exposes `public` through PostgREST and the anon key ships in the
+    browser bundle, so a table without RLS is readable by anyone with the URL.
+
+    Asserted against EXPECTED_TABLES rather than a copy of the list, so a new
+    application table cannot be added without also being covered here.
+    """
+    source = _revision_source("m3r08_enable_rls")
+    for table in EXPECTED_TABLES:
+        assert f'"{table}"' in source, f"{table} is not covered by the RLS migration"
+    # Alembic's own bookkeeping table is as reachable over the Data API as any
+    # other, and is covered deliberately rather than by accident.
+    assert '"alembic_version"' in source
+    assert "ENABLE ROW LEVEL SECURITY" in source
+    # No policy is created: absence of a policy is what denies the anon role.
+    assert "CREATE POLICY" not in source.upper()
+
+
+def test_revision_eight_downgrade_disables_rls() -> None:
+    downgrade = _revision_source("m3r08_enable_rls").split("def downgrade")[1]
+    assert "DISABLE ROW LEVEL SECURITY" in downgrade
 
 
 def test_revision_five_creates_verified_event_column_without_fk() -> None:
